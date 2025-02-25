@@ -1,19 +1,24 @@
+import 'dart:math' as math;
+
 import 'package:postgres/postgres.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 class PostgresDB {
   // Singleton instance
-   static final PostgresDB _instance = PostgresDB._internal();
+  static final PostgresDB _instance = PostgresDB._internal();
   factory PostgresDB() => _instance;
   PostgresDB._internal();
 
   PostgreSQLConnection? _connection;
 
+
   // (NEW) StreamController to broadcast new messages
   final StreamController<Map<String, dynamic>> _messageStreamController =
-      StreamController.broadcast();
+  StreamController.broadcast();
 
   // (NEW) Public stream so your UI can listen to new messages
   Stream<Map<String, dynamic>> get messageStream =>
@@ -40,9 +45,8 @@ class PostgresDB {
       await _connection!.open();
       print("✅ Database connected!");
 
-      // (NEW) Once connected, begin listening for new messages
+      // Ensure LISTEN starts properly
       await listenForNewMessages();
-
     } catch (e) {
       print("❌ Error connecting to database: $e");
       rethrow;
@@ -50,80 +54,141 @@ class PostgresDB {
   }
 
 
-bool _isOpeningConnection = false;
-Completer<void>? _connectionCompleter;
 
-Future<void> ensureConnection() async {
-  if (_connection != null && !_connection!.isClosed) {
-    print("✅ Connection is already open.");
-    return;
+
+  bool _isOpeningConnection = false;
+  Completer<void>? _connectionCompleter;
+
+  Future<void> ensureConnection() async {
+    if (_connection != null && !_connection!.isClosed) {
+      print("✅ Connection is already open.");
+      return;
+    }
+
+    if (_isOpeningConnection) {
+      print("🛑 Connection is already being established. Waiting...");
+      await _connectionCompleter?.future;
+      return;
+    }
+
+    _isOpeningConnection = true;
+    _connectionCompleter = Completer<void>();
+
+    print("🔄 Reopening a new database connection...");
+
+    try {
+      _connection = _createConnection();
+      await _connection!.open();
+      print("✅ Database reconnected successfully!");
+
+      // ✅ Restart message listener after reconnecting
+      await listenForNewMessages();
+
+      _connectionCompleter?.complete();
+    } catch (e) {
+      print("❌ Error reopening database connection: $e");
+      _connectionCompleter?.completeError(e);
+    } finally {
+      _isOpeningConnection = false;
+    }
   }
 
-  if (_isOpeningConnection) {
-    print("🛑 Connection is already being established. Waiting...");
-    await _connectionCompleter?.future;
-    return;
+
+  void _restartMessageStream() {
+    print("🔄 Restarting message listener...");
+
+    // Close the existing stream safely
+    _messageStreamController.close().then((_) {
+      print("🔁 Stream closed, restarting listener...");
+
+      // Create a new stream inside the same object without reassigning
+      _listenForNewMessages();
+    });
+
+    print("✅ Message listener restarted!");
   }
 
-  _isOpeningConnection = true;
-  _connectionCompleter = Completer<void>();
 
-  print("🔄 Reopening a new database connection...");
 
-  try {
-    _connection = _createConnection();
-    await _connection!.open();
-    print("✅ Database reconnected successfully!");
 
-    // Mark connection as completed
-    _connectionCompleter?.complete();
-  } catch (e) {
-    print("❌ Error reopening database connection: $e");
-    _connectionCompleter?.completeError(e);
-  } finally {
-    _isOpeningConnection = false;
+  void _listenForNewMessages() async {
+    if (_connection == null || _connection!.isClosed) {
+      print("⚠️ Database connection is closed. Cannot listen for messages.");
+      return;
+    }
+
+    print("👂 Listening for new messages...");
+
+    await _connection!.execute("LISTEN new_message_event;");
+
+    _connection!.notifications.listen((event) {
+      print("📩 New message received: ${event.payload}");
+
+      try {
+        final newMessage = jsonDecode(event.payload) as Map<String, dynamic>;
+        if (!_messageStreamController.isClosed) {
+          _messageStreamController.add(newMessage);
+        }
+      } catch (e) {
+        print("❌ Error parsing new message: $e");
+      }
+    });
+
+    print("✅ Message listener set up successfully.");
   }
-}
 
 
 
 
-  Future<void> closeConnection() async {
-  if (_connection != null && !_connection!.isClosed) {
-    print("⚠️ Clearing user session instead of closing database connection...");
-    
-    // Clear only the session data instead of closing the database
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('currentUserEmail');
-    
-    print("✅ User session cleared. Database remains open.");
+  Future<void> closeConnection({bool clearSession = false}) async {
+    if (_connection != null && !_connection!.isClosed) {
+      print("⚠️ Closing database connection...");
+
+      if (clearSession) {
+        print("! Clearing user session...");
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('currentUserEmail');
+      }
+
+      print("✅ Database remains open.");
+    }
   }
-}
 
 
   // (NEW) Listen for notifications on 'new_message'
   Future<void> listenForNewMessages() async {
-    if (_connection == null) return;
+    if (_connection == null || _connection!.isClosed) {
+      print("⚠️ Database connection is closed. Cannot listen for messages.");
+      return;
+    }
 
-    // Execute the LISTEN command
-    await _connection!.query("LISTEN new_message");
+    print("👂 Listening for new messages...");
 
-    // Any new NOTIFY on 'new_message' triggers this subscription
+    await _connection!.execute("LISTEN new_message;");
+    print("✅ LISTEN command executed successfully.");
+
     _connection!.notifications.listen((event) {
+      print("🔔 Received NOTIFY event: ${event.channel}, payload: ${event.payload}");
+
       if (event.channel == 'new_message') {
         try {
           final payload = jsonDecode(event.payload);
-          print("🔔 Received new message: $payload");
-          // Push it into our Stream so the UI can react
-          _messageStreamController.add(payload);
+          print("📩 New message received: $payload");
+
+          if (!_messageStreamController.isClosed) {
+            _messageStreamController.add(payload);
+          }
         } catch (e) {
-          print("Error parsing NOTIFY payload: $e");
+          print("❌ Error parsing NOTIFY payload: $e");
         }
       }
     });
 
-    print("🔊 Now listening on channel 'new_message'.");
+    print("✅ Message listener is running.");
   }
+
+
+
 
   // (NEW) Helper to send a new message
   Future<void> sendMessage({
@@ -160,207 +225,254 @@ Future<void> ensureConnection() async {
 
   Future<String?> loadUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('currentUserEmail');
+    String? email = prefs.getString('currentUserEmail');
+
+    if (email == null) {
+      // Fetch email from the database if not in SharedPreferences
+      email = await _getEmailFromDatabase();
+
+      if (email != null) {
+        await prefs.setString('currentUserEmail', email);
+      }
+    }
+
+    return email;
   }
+
+  Future<String?> _getEmailFromDatabase() async {
+    await ensureConnection(); // Ensure database connection is open
+
+    try {
+      final result = await _connection!.query(
+        '''
+      SELECT email FROM users
+      WHERE id = @userId
+      LIMIT 1
+      ''',
+        substitutionValues: {'userId': await getCurrentUserId()},
+      );
+
+      if (result.isNotEmpty) {
+        return result.first[0] as String;
+      }
+    } catch (e) {
+      print("❌ Error fetching email from database: $e");
+    }
+
+    return null;
+  }
+
+
+
 
   /// Helper function to load a user's roles from user_roles
   Future<String> getUserRoles(int userId) async {
-  await ensureConnection();
+    await ensureConnection();
 
-  try {
-    final result = await _connection!.query(
-      '''
+    try {
+      final result = await _connection!.query(
+        '''
       SELECT role
       FROM user_roles
       WHERE user_id = @userId
       LIMIT 1
       ''',
-      substitutionValues: {'userId': userId},
-    );
+        substitutionValues: {'userId': userId},
+      );
 
-    if (result.isNotEmpty) {
-      String fetchedRole = result.first[0] as String;
-      print("Fetched role for user $userId: $fetchedRole"); // Debugging
-      return fetchedRole;
-    } else {
-      print("⚠️ No role found for user $userId");
+      if (result.isNotEmpty) {
+        String fetchedRole = result.first[0] as String;
+        print("Fetched role for user $userId: $fetchedRole"); // Debugging
+        return fetchedRole;
+      } else {
+        print("⚠️ No role found for user $userId");
+        return "Unknown Role";
+      }
+    } catch (e) {
+      print(" Error fetching user role: $e");
       return "Unknown Role";
     }
-  } catch (e) {
-    print(" Error fetching user role: $e");
-    return "Unknown Role";
   }
-}
 
 
   // Sign in
   Future<Map<String, dynamic>?> signIn(String email, String password) async {
-  await ensureConnection(); // Make sure the connection is open
-  print("🟢 Signing in user: $email");
+    await ensureConnection(); // Ensure database connection is open
+    print("🟢 Signing in user: $email");
 
-  try {
-    final results = await _connection!.query(
-      '''
+    try {
+      final results = await _connection!.query(
+        '''
       SELECT id, username, email, name, bio, profile_pic_url
       FROM users
       WHERE email = @email AND password = @password
       ''',
-      substitutionValues: {
-        "email": email,
-        "password": password,
-      },
-    );
+        substitutionValues: {
+          "email": email,
+          "password": password,
+        },
+      );
 
-    if (results.isNotEmpty) {
-      final row = results[0];
-      final userId = row[0] as int;
-      final userRoles = await getUserRoles(userId);
+      if (results.isNotEmpty) {
+        final row = results[0];
+        final userId = row[0] as int;
+        final userRoles = await getUserRoles(userId);
 
-      final user = {
-        "id": userId,
-        "username": row[1],
-        "email": row[2],
-        "name": row[3],
-        "bio": row[4],
-        "profile_pic_url": row[5],
-        "roles": userRoles,
-      };
+        final user = {
+          "id": userId,
+          "username": row[1],
+          "email": row[2],
+          "name": row[3],
+          "bio": row[4],
+          "profile_pic_url": row[5],
+          "roles": userRoles,
+        };
 
-      // Save email to session storage
-      await saveUserEmail(user["email"]);
-      print("✅ User signed in successfully!");
+        // ✅ Save email & user details to SharedPreferences
+        await _saveUserToPreferences(user);
 
-      return user;
-    } else {
-      print("⚠️ User not found.");
+        print("✅ User signed in successfully!");
+
+        return user;
+      } else {
+        print("⚠️ User not found.");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Error during sign-in: $e");
       return null;
     }
-  } catch (e) {
-    print("❌ Error during sign-in: $e");
-    return null;
   }
-}
+
+
+  Future<void> _saveUserToPreferences(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('currentUserEmail', user['email']);
+    await prefs.setInt('currentUserId', user['id']); // Store user ID
+    await prefs.setString('username', user['username']); // Store username
+    await prefs.setString('profilePic', user['profile_pic_url'] ?? '');
+    await prefs.setString('role', user['roles'] ?? '');
+
+    print("✅ User data saved to SharedPreferences!");
+  }
+
+
+
 
 
   // Sign up
   Future<bool> signUp(Map<String, dynamic> userData) async {
-  await ensureConnection(); // Ensure connection is open
-  try {
-    // Insert basic user info into 'users'
-    final insertedUser = await _connection!.query(
-      '''
+    await ensureConnection(); // Ensure connection is open
+    try {
+      // Insert user into 'users' table
+      final insertedUser = await _connection!.query(
+        '''
       INSERT INTO users (username, password, email, name, bio, profile_pic_url)
       VALUES (@username, @password, @email, @name, @bio, @profile_pic_url)
       RETURNING id
       ''',
-      substitutionValues: {
-        "username": userData["username"],
-        "password": userData["password"],
-        "email": userData["email"],
-        "name": userData["name"],
-        "bio": userData["bio"],
-        "profile_pic_url": userData["profile_pic_url"],
-      },
-    );
+        substitutionValues: {
+          "username": userData["username"],
+          "password": userData["password"],
+          "email": userData["email"],
+          "name": userData["name"],
+          "bio": userData["bio"],
+          "profile_pic_url": userData["profile_pic_url"],
+        },
+      );
 
-    final newUserId = insertedUser.first[0] as int;
+      if (insertedUser.isEmpty) {
+        print("⚠️ Sign-up failed: No user was created.");
+        return false;
+      }
 
-    // Insert exactly ONE role
-    // userData["role"] might be a single string like "ROLE_USER" or "ROLE_ADMIN"
-    final role = userData["role"] ?? "ROLE_USER";
+      final newUserId = insertedUser.first[0] as int;
 
-    // Insert into 'user_roles' (one row per user)
-    await _connection!.query(
-      '''
+      // Insert role into 'user_roles' table
+      final role = userData["role"] ?? "ROLE_USER";
+      await _connection!.query(
+        '''
       INSERT INTO user_roles (user_id, role)
       VALUES (@userId, @role)
       ''',
-      substitutionValues: {
-        "userId": newUserId,
-        "role": role,
-      },
-    );
+        substitutionValues: {
+          "userId": newUserId,
+          "role": role,
+        },
+      );
 
-    print("User created successfully!");
-    return true;
-  } catch (e) {
-    print("Error during sign-up: $e");
-    return false;
+      // ✅ Save email & user ID in SharedPreferences
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_email', userData["email"]);
+      await prefs.setInt('user_id', newUserId);
+
+      print("✅ User created successfully! ID: $newUserId");
+      return true;
+    } catch (e) {
+      print("❌ Error during sign-up: $e");
+      return false;
+    }
   }
-}
+
 
 
   // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
-  await ensureConnection(); // Ensure connection is open
-  try {
-    // First query the 'users' table
-    final userResults = await _connection!.query('''
+    await ensureConnection(); // Ensure connection is open
+    try {
+      // First query the 'users' table
+      final userResults = await _connection!.query('''
       SELECT id, username, password, email
       FROM users
       WHERE email = @email
     ''', substitutionValues: {
-      'email': email,
-    });
+        'email': email,
+      });
 
-    if (userResults.isEmpty) {
-      print("No user found for email: $email");
-      return null;
-    }
+      if (userResults.isEmpty) {
+        print("No user found for email: $email");
+        return null;
+      }
 
-    final row = userResults.first;
-    final userId = row[0] as int;
-    final user = {
-      "id": userId,
-      "username": row[1],
-      "password": row[2],
-      "email": row[3],
-    };
+      final row = userResults.first;
+      final userId = row[0] as int;
+      final user = {
+        "id": userId,
+        "username": row[1],
+        "password": row[2],
+        "email": row[3],
+      };
 
-    // Fetch the single role from user_roles
-    final roleResults = await _connection!.query(
-      '''
+      // Fetch the single role from user_roles
+      final roleResults = await _connection!.query(
+        '''
       SELECT role
       FROM user_roles
       WHERE user_id = @userId
       ''',
-      substitutionValues: {"userId": userId},
-    );
+        substitutionValues: {"userId": userId},
+      );
 
-    // If there's exactly one row, get that role
-    if (roleResults.isNotEmpty) {
-      final userRole = roleResults.first[0] as String;
-      user["role"] = userRole;
-    } else {
-      // If there's no row, you can decide on a default or set it to null
-      user["role"] = null;
+      // If there's exactly one row, get that role
+      if (roleResults.isNotEmpty) {
+        final userRole = roleResults.first[0] as String;
+        user["role"] = userRole;
+      } else {
+        // If there's no row, you can decide on a default or set it to null
+        user["role"] = null;
+      }
+
+      return user;
+    } catch (e) {
+      print("Error during getUserByEmail: $e");
+      return null;
     }
-
-    return user;
-  } catch (e) {
-    print("Error during getUserByEmail: $e");
-    return null;
   }
-}
 
 
   // Get current user ID
-  Future<int?> getCurrentUserId() async {
-    try {
-      // Retrieve the email of the current user from SharedPreferences
-      final email = await loadUserEmail();
-      if (email != null) {
-        // Query the database for the user's ID
-        final user = await getUserByEmail(email);
-        if (user != null) {
-          return user['id']; // Return the user's ID
-        }
-      }
-    } catch (e) {
-      print("Error retrieving current user ID: $e");
-    }
-    return null; // Return null if user ID cannot be retrieved
-  }
+
+
 
   // Paginated posts retrieval
   Future<List<Map<String, dynamic>>> getPostsPaginated({
@@ -682,40 +794,30 @@ Future<void> ensureConnection() async {
     }
   }
 
-  Future<Map<String, dynamic>?> getUserById(int userId) async {
-    await ensureConnection();
+  Future<int?> getCurrentUserId() async {
+    await ensureConnection(); // Ensure database connection is active
 
     try {
-      final result = await _connection!.query(
-        """
-        SELECT id, username, bio, profile_pic_url
-        FROM users
-        WHERE id = @userId
-        """,
-        substitutionValues: {'userId': userId},
-      );
+      final result = await _connection!.query('''
+            SELECT id FROM users WHERE email = @email
+        ''', substitutionValues: {
+        'email': await loadUserEmail(), // Fetch stored email from SharedPreferences
+      });
 
-      if (result.isEmpty) {
+      if (result.isNotEmpty) {
+        final userId = result.first[0] as int;
+        print("🔍 [SUCCESS] Retrieved User ID from database: $userId");
+        return userId;
+      } else {
+        print("⚠️ [ERROR] User not found in database.");
         return null;
       }
-
-      // parse the result
-      final row = result[0];
-      // fetch roles from user_roles
-      final roles = await getUserRoles(userId);
-
-      return {
-        "id": row[0],
-        "username": row[1],
-        "bio": row[2],
-        "profile_pic_url": row[3],
-        "roles": roles,
-      };
     } catch (e) {
-      print("Error fetching user by ID: $e");
+      print("❌ [DB ERROR] Failed to fetch user ID: $e");
       return null;
     }
   }
+
 
   // Check connection status between two users
   Future<Map<String, bool>> checkConnectionStatus({
@@ -997,10 +1099,10 @@ Future<void> ensureConnection() async {
     }
   }
 
-Future<List<Map<String, dynamic>>> getAcceptedConnections(int userId) async {
-  await ensureConnection();
+  Future<List<Map<String, dynamic>>> getAcceptedConnections(int userId) async {
+    await ensureConnection();
 
-  final results = await _connection!.query('''
+    final results = await _connection!.query('''
     SELECT 
       CASE 
         WHEN user_id = @userId THEN connection_id
@@ -1016,60 +1118,383 @@ Future<List<Map<String, dynamic>>> getAcceptedConnections(int userId) async {
       AND status = 'accepted'
   ''', substitutionValues: {'userId': userId});
 
-  return results.map((row) {
-    return {
-      "connection_id": row[0], // The other person's user ID
-      "username": row[1],      // Their username
-    };
-  }).toList();
-}
+    return results.map((row) {
+      return {
+        "connection_id": row[0], // The other person's user ID
+        "username": row[1],      // Their username
+      };
+    }).toList();
+  }
 
-Future<List<Map<String, dynamic>>> getChatHistory(int user1, int user2) async {
-  await ensureConnection(); // Ensure database connection is open
+  Future<List<Map<String, dynamic>>> getChatHistory(int user1, int user2) async {
+    await ensureConnection(); // Ensure database connection is open
 
-  try {
-    final results = await _connection!.query('''
+    try {
+      final results = await _connection!.query('''
       SELECT id, content, sender_id, receiver_id, created_at::TEXT
       FROM messages
       WHERE (sender_id = @user1 AND receiver_id = @user2)
          OR (sender_id = @user2 AND receiver_id = @user1)
       ORDER BY created_at ASC
     ''', substitutionValues: {
-      'user1': user1,
-      'user2': user2,
-    });
+        'user1': user1,
+        'user2': user2,
+      });
 
-    return results.map((row) {
-      return {
-        "id": row[0],
-        "content": row[1],
-        "sender_id": row[2],
-        "receiver_id": row[3],
-        "created_at": row[4], // Convert timestamp to string
-      };
-    }).toList();
-  } catch (e) {
-    print("❌ Error fetching chat history: $e");
-    return [];
+      return results.map((row) {
+        return {
+          "id": row[0],
+          "content": row[1],
+          "sender_id": row[2],
+          "receiver_id": row[3],
+          "created_at": row[4], // Convert timestamp to string
+        };
+      }).toList();
+    } catch (e) {
+      print("❌ Error fetching chat history: $e");
+      return [];
+    }
+
+
+
   }
 
-  
-  
-}
+  Future<void> signOut() async {
+    print("🔴 Logging out user...");
 
-Future<void> signOut() async {
-  print("🔴 Logging out user...");
+    // ✅ Only clear session when explicitly signing out
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('currentUserEmail');
+    await prefs.remove('currentUserId');
+    await prefs.remove('username');
+    await prefs.remove('profilePic');
+    await prefs.remove('role');
 
-  // Clear session but do not close database connection
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.remove('currentUserEmail');
-
-  print("✅ User logged out successfully. Database remains open.");
-}
-
-
+    print("✅ User logged out successfully. Database remains open.");
+  }
 
 
-  
+  Future<int?> insertLargeObject(File file, int userId) async {
+    await ensureConnection(); // Ensure connection is open
+
+    try {
+      print("📌 Starting transaction...");
+      await _connection!.query('BEGIN');
+
+      // 1️⃣ Create Large Object (returns an integer OID)
+      final createResult = await _connection!.query('SELECT lo_create(0)::int AS oid');
+      if (createResult.isEmpty || createResult.first.isEmpty || createResult.first[0] == null) {
+        throw Exception("❌ lo_create() failed, returned an empty result!");
+      }
+      final int oid = createResult.first[0] as int;
+      print("✅ Large Object created with OID: $oid");
+
+      // 2️⃣ Open Large Object for Writing (WRITE mode)
+      final openResult = await _connection!.query(
+        'SELECT lo_open(@oid, 131072) AS fd', // WRITE Mode (131072 = INV_WRITE)
+        substitutionValues: {'oid': oid},
+      );
+      if (openResult.isEmpty || openResult.first.isEmpty || openResult.first[0] == null) {
+        throw Exception("❌ lo_open() failed for OID = $oid");
+      }
+      final int fd = openResult.first[0] as int;
+      print("✅ Large Object opened with File Descriptor: $fd");
+
+      // 3️⃣ Read File as Binary (Ensure True Binary Read)
+      final Uint8List fileBytes = await file.readAsBytes();
+      print("📌 Read file of size: ${fileBytes.length} bytes");
+
+      // 4️⃣ **Ensure True Binary Insertion (Chunk Writing)**
+      const int chunkSize = 8192; // PostgreSQL Large Object best practice
+      for (int i = 0; i < fileBytes.length; i += chunkSize) {
+        final Uint8List chunk = fileBytes.sublist(i, (i + chunkSize > fileBytes.length) ? fileBytes.length : i + chunkSize);
+        try {
+          await _connection!.query(
+            "SELECT lowrite(@fd, @chunk::bytea)", // Explicitly cast chunk as bytea
+            substitutionValues: {'fd': fd, 'chunk': chunk},
+          );
+        } catch (e) {
+          print("❌ Error writing chunk at index $i: $e");
+          throw Exception("❌ Failed to write chunk at $i");
+        }
+      }
+      print("✅ Wrote all bytes correctly using chunk writing.");
+
+      // 5️⃣ Close Large Object
+      await _connection!.query('SELECT lo_close(@fd)', substitutionValues: {'fd': fd});
+      print("✅ Large Object closed.");
+
+      // 6️⃣ Save OID in users table
+      await _connection!.query(
+        'UPDATE users SET profile_pic_oid = @oidStr WHERE id = @userId',
+        substitutionValues: {'oidStr': oid.toString(), 'userId': userId},
+      );
+      print("✅ Profile picture OID updated in database.");
+
+      // 7️⃣ Commit Transaction
+      await _connection!.query('COMMIT');
+      print("✅ Transaction committed successfully!");
+
+      return oid;
+    } catch (e, stacktrace) {
+      print("❌ Error inserting image LO: $e");
+      await _connection!.query('ROLLBACK');
+      print("❌ Transaction rolled back.");
+      return null;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Future<Uint8List?> fetchLargeObject(String profilePicOid) async {
+  //   await ensureConnection();
+  //
+  //   try {
+  //     print("📌 Fetching profile image for OID: $profilePicOid");
+  //     await _connection!.query('BEGIN');
+  //
+  //     // Convert OID from VARCHAR to INTEGER
+  //     final int oid = int.tryParse(profilePicOid) ?? -1;
+  //     if (oid < 0) {
+  //       print("❌ Error: Invalid OID stored in profile_pic_oid.");
+  //       await _connection!.query('ROLLBACK');
+  //       return null;
+  //     }
+  //
+  //     // 1️⃣ Open Large Object
+  //     var result = await _connection!.query(
+  //       "SELECT lo_open(@oid, 262144) AS fd", // 262144 = INV_READ
+  //       substitutionValues: {'oid': oid},
+  //     );
+  //
+  //     if (result.isEmpty || result.first.isEmpty || result.first[0] == null) {
+  //       print("❌ Error: Failed to open Large Object (OID: $oid)");
+  //       await _connection!.query('ROLLBACK');
+  //       return null;
+  //     }
+  //
+  //     final int fd = result.first[0];
+  //     print("✅ Large Object opened with File Descriptor: $fd");
+  //
+  //     // 2️⃣ Read Large Object as binary
+  //     result = await _connection!.query(
+  //       "SELECT loread(@fd, 10000000)",
+  //       substitutionValues: {'fd': fd},
+  //     );
+  //
+  //     final dynamic rowValue = result.isNotEmpty ? result.first[0] : null;
+  //     Uint8List? fileData;
+  //
+  //     if (rowValue != null && rowValue is List<int>) {
+  //       fileData = Uint8List.fromList(rowValue);
+  //
+  //       // ✅ Debug: Print the first few bytes to check if it's a valid image format
+  //       final firstBytes = fileData.take(8).toList();
+  //       print('📸 Header bytes: $firstBytes');
+  //
+  //       print("✅ Successfully read ${fileData.length} bytes from OID: $oid");
+  //     } else {
+  //       print("❌ Error: Invalid binary data retrieved!");
+  //     }
+  //
+  //     // 3️⃣ Close and commit
+  //     await _connection!.query("SELECT lo_close(@fd)", substitutionValues: {'fd': fd});
+  //     await _connection!.query('COMMIT');
+  //
+  //     return fileData;
+  //   } catch (e) {
+  //     await _connection!.query('ROLLBACK');
+  //     print("❌ Error fetching Large Object: $e");
+  //     return null;
+  //   }
+  // }
+
+  Future<Uint8List?> fetchLargeObject(String profilePicOid) async {
+    await ensureConnection();  // Ensure database connection
+
+    try {
+      print("📌 Fetching profile image for OID: $profilePicOid");
+      await _connection!.query('BEGIN');  // Start transaction
+
+      // Convert OID from string to integer
+      final int oid = int.tryParse(profilePicOid) ?? -1;
+      if (oid < 0) {
+        print("❌ Error: Invalid OID stored in profile_pic_oid.");
+        await _connection!.query('ROLLBACK');
+        return null;
+      }
+
+      // 1️⃣ Open Large Object for reading
+      final openResult = await _connection!.query(
+        "SELECT lo_open(@oid, 262144) AS fd", // 262144 = INV_READ
+        substitutionValues: {'oid': oid},
+      );
+      if (openResult.isEmpty || openResult.first.isEmpty || openResult.first[0] == null) {
+        print("❌ Error: Failed to open Large Object (OID: $oid)");
+        await _connection!.query('ROLLBACK');
+        return null;
+      }
+
+      final int fd = openResult.first[0];
+      print("✅ Large Object opened with File Descriptor: $fd");
+
+      // 2️⃣ Read Large Object as **pure binary**
+      final readResult = await _connection!.query(
+        "SELECT loread(@fd, 10000000)", // Read up to 10MB
+        substitutionValues: {'fd': fd},
+      );
+
+      await _connection!.query("SELECT lo_close(@fd)", substitutionValues: {'fd': fd});
+      await _connection!.query('COMMIT');
+
+      if (readResult.isEmpty || readResult.first.isEmpty || readResult.first[0] == null) {
+        print("❌ Error: Image data is null!");
+        return null;
+      }
+
+      final dynamic rowValue = readResult.first[0];
+
+      // Ensure rowValue is a valid binary list
+      if (rowValue is List<int>) {
+        final Uint8List fileData = Uint8List.fromList(rowValue);
+        print("✅ Successfully read ${fileData.length} bytes from OID: $oid");
+        return fileData;
+      } else {
+        print("❌ Error: Retrieved data is not valid binary.");
+        return null;
+      }
+
+    } catch (e, stack) {
+      await _connection!.query('ROLLBACK');
+      print("❌ Error fetching Large Object: $e\n$stack");
+      return null;
+    }
+  }
+
+
+
+
+
+  Future<Map<String, dynamic>?> getUserById(int userId) async {
+    await ensureConnection();
+
+    try {
+      final result = await _connection!.query('''
+      SELECT id, username, bio, profile_pic_oid
+      FROM users
+      WHERE id = @userId
+    ''', substitutionValues: {'userId': userId});
+
+      if (result.isEmpty) {
+        return null;
+      }
+
+      final row = result[0];
+      final roles = await getUserRoles(userId);
+
+      return {
+        "id": row[0],
+        "username": row[1],
+        "bio": row[2],
+        "profile_pic_oid": row[3],  // ✅ Ensure profile_pic_oid is returned!
+        "roles": roles,
+      };
+    } catch (e) {
+      print("❌ Error fetching user by ID: $e");
+      return null;
+    }
+  }
+
+
+  Future<String?> getTestImageOid() async {
+    await ensureConnection();  // Ensure DB connection is open
+
+    try {
+      final result = await _connection!.query('''
+      SELECT image_oid FROM posts WHERE id = 1 LIMIT 1
+    ''');
+
+      if (result.isNotEmpty && result.first[0] != null) {
+        final String oidStr = result.first[0].toString();
+        print("🔍 Found test image OID: $oidStr");
+        return oidStr;
+      } else {
+        print("❌ No test image found in posts.");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Error fetching test image OID: $e");
+      return null;
+    }
+  }
+
+
+  Future<bool> updateUserProfilePicture(int userId, String profilePicOid) async {
+    print("📌 Updating profile picture OID in database for user ID: $userId");
+
+    try {
+      await _connection!.query(
+        'UPDATE users SET profile_pic_oid = @oid WHERE id = @userId',
+        substitutionValues: {
+          'oid': profilePicOid,
+          'userId': userId,
+        },
+      );
+
+      print("✅ Profile picture OID updated successfully.");
+      return true;
+    } catch (e, stacktrace) {
+      print("❌ Error updating profile picture OID: $e");
+      print("🛑 Stacktrace:\n$stacktrace");
+      return false;
+    }
+  }
+
+  Future<String?> saveLargeObject(String filePath) async {
+    print("📌 Starting Java JAR to save large object...");
+
+    try {
+      Process process = await Process.start(
+        'java',
+        ['-jar', 'assets/upload_photo.jar', filePath],
+      );
+
+      // Capture output (Java should return the OID)
+      String output = await process.stdout.transform(SystemEncoding().decoder).join();
+      String errorOutput = await process.stderr.transform(SystemEncoding().decoder).join();
+
+      // Ensure process exits properly
+      int exitCode = await process.exitCode;
+      process.kill(); // ✅ Close process
+
+      print("📌 Java process exited with code: $exitCode");
+      if (exitCode == 0) {
+        print("✅ Java JAR returned OID: $output");
+        return output.trim();
+      } else {
+        print("❌ Java JAR failed: $errorOutput");
+        return null;
+      }
+    } catch (e, stacktrace) {
+      print("❌ Error running Java JAR: $e");
+      print("🛑 Stacktrace:\n$stacktrace");
+      return null;
+    }
+  }
+
+
+
+
+
 }
 

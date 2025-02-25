@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart'; // For password hashing
 import 'package:shared_preferences/shared_preferences.dart'; // For session persistence
@@ -6,9 +7,10 @@ import 'signup.dart'; // SignUp page
 import 'home_page.dart'; // MainPage after successful sign-in
 import 'dart:async';
 
-void main() {
+Future<void> main() async {
   
   WidgetsFlutterBinding.ensureInitialized(); // Ensure plugins are initialized
+  await Firebase.initializeApp();
   runApp(const LinkedInSignInApp());
 }
 
@@ -117,8 +119,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _checkSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('currentUserEmail'); // Check for saved email
+    final email = prefs.getString('currentUserEmail');
+
     print("DEBUG: Email from session in SplashScreen: $email");
+
+    await Future.delayed(const Duration(seconds: 1)); // Ensure SharedPreferences is fully loaded
 
     if (email != null) {
       print("DEBUG: Navigating to HomePage with email: $email");
@@ -136,6 +141,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       );
     }
   }
+
 
   @override
   void dispose() {
@@ -228,8 +234,18 @@ class _SignInPageState extends State<SignInPage> {
           return;
         }
 
+        // ✅ Save user data in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('currentUserEmail', email);
+        await prefs.setInt('currentUserId', user['id']);
+        await prefs.setString('username', user['username'] ?? '');
+        await prefs.setString('profilePic', user['profile_pic_url'] ?? '');
+        await prefs.setString('role', user['role'] ?? '');
+
+        print("✅ User data saved to SharedPreferences!");
+
+        // ✅ Debug: Check if email is actually saved
+        print("DEBUG: Saved Email in SharedPreferences: ${prefs.getString('currentUserEmail')}");
 
         Navigator.pushReplacement(
           context,
@@ -244,6 +260,7 @@ class _SignInPageState extends State<SignInPage> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

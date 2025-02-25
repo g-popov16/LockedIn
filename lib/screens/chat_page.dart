@@ -43,67 +43,70 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _initChat() async {
-  final userId = await db.getCurrentUserId();
-  if (userId == null) {
-    print("⚠️ No logged-in user found");
-    return;
-  }
-  _currentUserId = userId;
-
-  await _loadChatHistory(_currentUserId, widget.otherUserId);
-
-  _messageSubscription?.cancel();
-  _messageSubscription = db.messageStream.listen((newMsg) {
-    print("📩 New message received: $newMsg");
-
-    final sender = newMsg["sender_id"];
-    final receiver = newMsg["receiver_id"];
-    final msgId = newMsg["id"];
-
-    final relevantChat = (sender == _currentUserId && receiver == widget.otherUserId) ||
-                        (sender == widget.otherUserId && receiver == _currentUserId);
-    if (!relevantChat) return;
-
-    final alreadyExists = _messages.any((m) => m["id"] == msgId);
-    if (alreadyExists) {
-      print("🔎 Duplicate message with id $msgId. Ignoring.");
+    final userId = await db.getCurrentUserId();
+    if (userId == null) {
+      print("⚠️ No logged-in user found");
       return;
     }
+    _currentUserId = userId;
 
-    setState(() {
-      _messages.add(newMsg);
-    });
-  });
-}
+    await _loadChatHistory(_currentUserId, widget.otherUserId);
 
+    _messageSubscription?.cancel();
+    _messageSubscription = db.messageStream.listen((newMsg) {
+      print("📩 [NEW MESSAGE RECEIVED]: $newMsg");
 
-  void _sendMessage() async {
-  final text = _messageController.text.trim();
-  if (text.isEmpty) return;
+      final sender = newMsg["sender_id"];
+      final receiver = newMsg["receiver_id"];
+      final msgId = newMsg["id"];
 
-  try {
-    await db.ensureConnection(); // Make sure the database connection is open
-    await db.sendMessage(
-      senderId: _currentUserId,
-      receiverId: widget.otherUserId,
-      content: text,
-    );
-    _messageController.clear();
+      final relevantChat = (sender == _currentUserId &&
+          receiver == widget.otherUserId) ||
+          (sender == widget.otherUserId && receiver == _currentUserId);
 
-    // Manually add the message to the chat UI
-    setState(() {
-      _messages.add({
-        "id": DateTime.now().millisecondsSinceEpoch, // Temporary ID
-        "sender_id": _currentUserId,
-        "receiver_id": widget.otherUserId,
-        "content": text,
-        "created_at": DateTime.now().toIso8601String(), // Fake timestamp for immediate UI update
+      if (!relevantChat) return;
+
+      final alreadyExists = _messages.any((m) => m["id"] == msgId);
+      if (alreadyExists) {
+        print("🔎 Duplicate message with id $msgId. Ignoring.");
+        return;
+      }
+
+      // ✅ Force UI update
+      setState(() {
+        _messages.add(newMsg);
       });
     });
-  } catch (e) {
-    print("❌ Error sending message: $e");
   }
-}
+
+
+    void _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    try {
+      await db.ensureConnection(); // Make sure the database connection is open
+      await db.sendMessage(
+        senderId: _currentUserId,
+        receiverId: widget.otherUserId,
+        content: text,
+      );
+      _messageController.clear();
+
+      // Manually add the message to the chat UI
+      setState(() {
+        _messages.add({
+          "id": DateTime.now().millisecondsSinceEpoch, // Temporary ID
+          "sender_id": _currentUserId,
+          "receiver_id": widget.otherUserId,
+          "content": text,
+          "created_at": DateTime.now().toIso8601String(), // Fake timestamp for immediate UI update
+        });
+      });
+    } catch (e) {
+      print("❌ Error sending message: $e");
+    }
+  }
 
 
   @override
@@ -140,7 +143,7 @@ class _ChatPageState extends State<ChatPage> {
 
                   return Align(
                     alignment:
-                        isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 4.0),
                       padding: const EdgeInsets.all(10.0),
@@ -189,41 +192,41 @@ class _ChatPageState extends State<ChatPage> {
 
           // Message input area
           Padding(
-  padding: EdgeInsets.only(
-    bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Fix for iPhone home indicator
-  ),
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-    color: Colors.grey[900],
-    child: Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Fix for iPhone home indicator
             ),
-            child: TextField(
-              controller: _messageController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: "Type a message...",
-                hintStyle: TextStyle(color: Colors.grey),
-                border: InputBorder.none,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              color: Colors.grey[900],
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          hintText: "Type a message...",
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: _sendMessage,
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.send, color: Colors.white),
-          onPressed: _sendMessage,
-        ),
-      ],
-    ),
-  ),
-)
+          )
 
         ],
       ),

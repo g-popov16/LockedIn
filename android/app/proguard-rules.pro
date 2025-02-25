@@ -1,0 +1,2 @@
+-keep class org.postgresql.** { *; }
+-dontwarn org.postgresql.**
