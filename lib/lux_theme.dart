@@ -72,7 +72,6 @@ class LuxTheme {
         ),
         hintStyle: TextStyle(color: Colors.grey),
       ),
-      
     );
   }
 }

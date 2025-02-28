@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lockedin/main.dart';
+import 'package:lockedin/screens/team_page.dart';
 import '../sql.dart';
 import '../widgets/post_widget.dart';
 import '../widgets/job_widget.dart';
-import 'dart:typed_data';
-import 'dart:io';
 
 class UserProfilePage extends StatefulWidget {
   final int userId;
   final bool isCurrentUser;
+
 
   const UserProfilePage({
     super.key,
@@ -32,8 +32,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool showPosts = true;
   bool showJobs = true;
   bool showRequests = false;
-  Uint8List? userProfileImage;
+  bool hasTeam = false;
 
+  String? profileImageUrl; // ✅ Store Firebase URL properly
 
   String connectionStatus =
       "not_connected"; // Can be "not_connected", "pending", or "connected"
@@ -45,9 +46,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
     if (widget.isCurrentUser) {
       _fetchConnectionRequests();
     }
+    _fetchPostsAndJobs();
   }
 
-  String formatRole(String role) {
+  String formatRole(String? role) {
     switch (role) {
       case "ROLE_USER":
         return "User";
@@ -58,9 +60,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
       case "ROLE_TEAM":
         return "Team";
       default:
-        return "Unknown Role"; // If something unexpected is received
+        print("❌ Unknown Role received: $role"); // Debugging
+        return "Unknown Role";
     }
   }
+
 
   Future<void> _fetchUserData() async {
     setState(() {
@@ -68,35 +72,37 @@ class _UserProfilePageState extends State<UserProfilePage> {
     });
 
     try {
-      // 1️⃣ Fetch user details, including profile_pic_oid
+      // 1️⃣ Fetch user details
       final user = await db.getUserById(widget.userId);
 
-      // 2️⃣ Get the actual OID stored in users.profile_pic_oid
-      Uint8List? profileImage;
-      final String? profilePicOid = user?["profile_pic_oid"]?.toString().trim();
-
-      if (profilePicOid != null && profilePicOid.isNotEmpty) {
-        print("📌 Fetching actual profile image for OID: $profilePicOid");
-
-        profileImage = await db.fetchLargeObject(profilePicOid);
-
-        if (profileImage != null) {
-          print("✅ Successfully fetched actual profile image, byte length: ${profileImage.length}");
-        } else {
-          print("❌ Failed to fetch actual profile image.");
-        }
-      } else {
-        print("⚠️ No profile picture OID found for this user.");
+      if (user == null) {
+        throw Exception("User not found in database.");
       }
 
-      // 3️⃣ Update state with the fetched profile image
+      print("🔍 Full user data from DB: $user"); // Debugging
+
+      // 2️⃣ Extract Role (Fix: Ensure it's accessed correctly)
+      final String? fetchedRole = user["roles"] ?? user["role"]; // Ensure correct key
+      final String? fetchedProfileUrl = user["profile_pic_url"];
+
+      print("🔍 Role from DB: $fetchedRole"); // Debugging
+
+      bool teamExists = await db.isUserInTeam(widget.userId);
+      bool isTeamCreator = await db.isUserTeamCreator(widget.userId);
+
+      // 3️⃣ Ensure valid role and profile picture URL
       setState(() {
-        username = user?["username"] ?? "Unknown User";
-        bio = user?["bio"] ?? "No bio available.";
-        userProfileImage = profileImage; // ✅ Use actual profile pic OID now
+        username = user["username"] ?? "Unknown User";
+        role = formatRole(fetchedRole ?? "Unknown"); // ✅ Ensure role is passed correctly
+        bio = user["bio"] ?? "No bio available.";
+        profileImageUrl = (fetchedProfileUrl != null && fetchedProfileUrl.isNotEmpty)
+            ? fetchedProfileUrl
+            : "https://via.placeholder.com/150"; // Default Placeholder\
+        hasTeam = teamExists || isTeamCreator;
         isLoading = false;
       });
 
+      print("✅ Processed Role: $role"); // Debugging
     } catch (e) {
       print("❌ Error fetching user data: $e");
       setState(() {
@@ -104,12 +110,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       });
     }
   }
-
-
-
-
-
-
 
   Future<void> _fetchConnectionRequests() async {
     try {
@@ -126,7 +126,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _sendConnectionRequest() async {
     try {
       final int? currentUserId = await db.getCurrentUserId();
-      print("Current User ID: $currentUserId, Target User ID: ${widget.userId}"); // Debugging Line
+      print(
+          "Current User ID: $currentUserId, Target User ID: ${widget.userId}"); // Debugging Line
 
       if (currentUserId == null || currentUserId == widget.userId) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +153,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       print("Error sending connection request: $e");
     }
   }
-
 
   Future<void> _cancelConnectionRequest() async {
     try {
@@ -298,7 +298,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         context: context,
         isScrollControlled: true,
         builder: (BuildContext context) {
-          print("🐞 userProfileImage is null? ${userProfileImage == null}");
+          print("🐞 userProfileImage is null? ${profileImageUrl == null}");
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -335,8 +335,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    print("🐞 userProfileImage is null? ${userProfileImage == null}");
+    print("🐞 Checking role before rendering UI: $role");
+
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E1E), // Dark background
       body: isLoading
@@ -384,17 +386,20 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     CircleAvatar(
                       radius: 40,
                       backgroundColor: Colors.white,
-                      backgroundImage: userProfileImage != null
-                          ? MemoryImage(userProfileImage!)
+                      backgroundImage: (profileImageUrl != null &&
+                          profileImageUrl!.isNotEmpty)
+                          ? NetworkImage(profileImageUrl!)
                           : null,
-                      child: userProfileImage == null
+                      child: (profileImageUrl == null ||
+                          profileImageUrl!.isEmpty)
                           ? Text(
-                        username != null ? username![0].toUpperCase() : "?",
+                        username != null
+                            ? username![0].toUpperCase()
+                            : "?",
                         style: const TextStyle(
-                          fontSize: 40,
-                          color: Colors.blueAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 40,
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.bold),
                       )
                           : null,
                     ),
@@ -410,7 +415,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     const SizedBox(height: 5),
                     if (role != null)
                       Text(
-                        "Role: $role", // Now it will display "User", "Admin", "Sponsor", or "Team"
+                        "Role: $role",
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 16,
@@ -423,64 +428,90 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ),
             ),
           ),
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   if (widget.isCurrentUser)
-                    _buildCollapsibleSection(
-                      title: "Connection Requests",
-                      isVisible: showRequests,
-                      onToggle: () => setState(() {
-                        showRequests = !showRequests;
-                      }),
-                      child: connectionRequests.isEmpty
-                          ? const Text(
-                        "No connection requests.",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white54,
-                        ),
-                      )
-                          : Column(
-                        children: connectionRequests.map((request) {
-                          return ListTile(
-                            title: Text(
-                              request["username"],
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white),
-                            ),
-                            subtitle: const Text(
-                              "Wants to connect",
-                              style: TextStyle(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.check,
-                                      color: Colors.green),
-                                  onPressed: () => _handleRequest(
-                                      request["id"], true),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close,
-                                      color: Colors.red),
-                                  onPressed: () => _handleRequest(
-                                      request["id"], false),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+              _buildCollapsibleSection(
+              title: "Connection Requests",
+              isVisible: showRequests,
+              onToggle: () => setState(() {
+                showRequests = !showRequests;
+              }),
+              child: connectionRequests.isEmpty
+                  ? const Text(
+                "No connection requests.",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white54,
+                ),
+              )
+                  : Column(
+                children: connectionRequests.map((request) {
+                  return ListTile(
+                    title: Text(
+                      request["username"],
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      "Wants to connect",
+                      style: TextStyle(
+                        color: Colors.white70,
                       ),
                     ),
-                  const SizedBox(height: 20),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.check,
+                              color: Colors.green),
+                          onPressed: () => _handleRequest(
+                              request["id"], true),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: Colors.red),
+                          onPressed: () => _handleRequest(
+                              request["id"], false),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+
+
+                  if (role != null && (role == "Team" || role == "User") && hasTeam)
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            print("🔍 Navigating to Team Page - Role: $role");
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TeamPage(
+                                  userId: widget.userId,
+                                  userRole: role!,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text("View Team"),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+
+                  // ✅ Collapsible Section for Posts
                   _buildCollapsibleSection(
                     title: "Posts",
                     isVisible: showPosts,
@@ -505,15 +536,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             content: post["content"],
                             userId: post["user_id"],
                             username: post["username"],
-                            likes: post["likes_count"],
+                            likes: post["likes_count"] ?? 0,
                             createdAt: post["created_at"],
-                            commentsCount: 0,
-                          ),
+
+                            isLiked: post["is_liked"] ?? false,   // <--- provide this!
+                          )
+
                         );
                       }).toList(),
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  // ✅ Collapsible Section for Jobs
                   _buildCollapsibleSection(
                     title: "Jobs",
                     isVisible: showJobs,
@@ -570,6 +605,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+
+
+
   Future<void> _logOut() async {
     try {
       await db.signOut(); // Call the new signOut method
@@ -578,7 +616,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const SignInPage()),
-            (route) => false,
+        (route) => false,
       );
 
       print("✅ User logged out successfully!");
@@ -587,6 +625,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to log out.")),
       );
+    }
+  }
+
+  Future<void> _fetchPostsAndJobs() async {
+    try {
+      final data = await db.getUserPostsAndJobs(widget.userId);
+      setState(() {
+        posts = data["posts"];
+        jobs = data["jobs"];
+      });
+    } catch (e) {
+      print("Error fetching posts and jobs: $e");
     }
   }
 

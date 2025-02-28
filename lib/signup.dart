@@ -1,15 +1,10 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart'; // For password hashing
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'sql.dart'; // Database helper
 import 'home_page.dart'; // Main page after sign-up
-import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_large_object/flutter_large_object.dart';
 import '../utils/firebase_storage_service.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -31,7 +26,17 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController bioController = TextEditingController();
 
   String? _selectedRole;
-  final List<String> _roles = ["ROLE_USER", "ROLE_SPONSOR", "ROLE_TEAM"];
+
+  // ✅ Role mapping
+  final Map<String, String> _roleMapping = {
+    "User": "ROLE_USER",
+    "Team": "ROLE_TEAM",
+    "Sponsor": "ROLE_SPONSOR",
+  };
+
+  // ✅ Convert roleMapping keys to list when accessed
+  List<String> get _roles => _roleMapping.keys.toList();
+
   File? _profileImage;
 
   @override
@@ -47,7 +52,8 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
@@ -73,8 +79,8 @@ class _SignUpPageState extends State<SignUpPage> {
         "email": userEmail,
         "name": nameController.text.trim(),
         "bio": bioController.text.trim(),
-        "profile_pic_url": "", // Placeholder for profile picture URL (changed from profile_pic_oid)
-        "role": _selectedRole!.toLowerCase(),
+        "profile_pic_url": "",
+        "role": _roleMapping[_selectedRole] ?? "ROLE_USER",
       };
 
       print("📌 Attempting to sign up user with data: $userData");
@@ -84,23 +90,39 @@ class _SignUpPageState extends State<SignUpPage> {
         if (success) {
           print("✅ User signed up successfully!");
 
-          // 1️⃣ Retrieve new user ID from SharedPreferences
+          // Retrieve newly created user ID
           final prefs = await SharedPreferences.getInstance();
           final newUserId = prefs.getInt('user_id');
-          print("📌 Retrieved user ID from SharedPreferences: $newUserId");
 
-          // 2️⃣ If a profile image is selected, upload to Firebase Storage
-          String? profilePicUrl;
-          if (_profileImage != null && newUserId != null) {
+          if (newUserId == null) {
+            print("❌ Error: User ID not found after sign-up.");
+            return;
+          }
+
+          // ✅ If role is "Team", ask for team name
+          if (_selectedRole == "Team") {
+            await _showTeamNameDialog(newUserId);
+          }
+
+          // ✅ If a profile image is selected, upload to Firebase Storage
+          if (_profileImage != null) {
             print("📌 Uploading profile picture for user ID: $newUserId");
 
-            profilePicUrl = await _firebaseStorage.uploadProfilePicture(_profileImage!, newUserId.toString());
+            // Upload image to Firebase Storage and get URL
+            String? profilePicUrl = await _firebaseStorage.uploadProfilePicture(
+              _profileImage!,
+              newUserId.toString(),
+            );
 
             if (profilePicUrl != null) {
               print("✅ Profile picture uploaded to Firebase: $profilePicUrl");
 
-              // 3️⃣ Update user in database with new profile_pic_url
-              bool updateSuccess = await db.updateUserProfilePicture(newUserId, profilePicUrl);
+              // ✅ Update `profile_pic_url` in the database
+              bool updateSuccess = await db.updateUserProfilePicture(
+                newUserId,
+                profilePicUrl,
+              );
+
               if (updateSuccess) {
                 print("✅ User profile picture URL updated in database.");
               } else {
@@ -110,10 +132,10 @@ class _SignUpPageState extends State<SignUpPage> {
               print("❌ Failed to upload profile picture to Firebase.");
             }
           } else {
-            print("⚠ No profile picture to upload or user ID is null.");
+            print("⚠ No profile picture to upload.");
           }
 
-          // 4️⃣ Save user session
+          // ✅ Save user session
           await db.saveUserEmail(userEmail);
           print("✅ User email saved locally.");
 
@@ -121,7 +143,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const SnackBar(content: Text("Account created successfully!")),
           );
 
-          // 5️⃣ Navigate to HomePage
+          // ✅ Navigate to HomePage
           print("📌 Navigating to HomePage...");
           Navigator.pushReplacement(
             context,
@@ -144,28 +166,6 @@ class _SignUpPageState extends State<SignUpPage> {
       print("⚠ Sign-up form validation failed or role is null.");
     }
   }
-
-  Future<String?> saveLargeObject(String filePath) async {
-    if (Platform.isAndroid) {
-      print("📌 Using Java JAR-based implementation on Android...");
-      return await runJarForLargeObject(filePath);
-    } else {
-      print("❌ Unsupported platform.");
-      return null;
-    }
-  }
-
-  Future<String?> runJarForLargeObject(String filePath) async {
-    try {
-      const MethodChannel _channel = MethodChannel('flutter/large_object');
-      return await _channel.invokeMethod('saveLargeObject', {'filePath': filePath});
-    } catch (e, stacktrace) {
-      print("❌ Error running Java JAR: $e");
-      print("🛑 Stacktrace:\n$stacktrace");
-      return null;
-    }
-  }
-
 
 
   @override
@@ -196,7 +196,8 @@ class _SignUpPageState extends State<SignUpPage> {
                         ? FileImage(_profileImage!)
                         : null,
                     child: _profileImage == null
-                        ? const Icon(Icons.add_a_photo, size: 50, color: Colors.grey)
+                        ? const Icon(Icons.add_a_photo,
+                            size: 50, color: Colors.grey)
                         : null,
                   ),
                 ),
@@ -208,8 +209,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     border: OutlineInputBorder(),
                     labelStyle: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  validator: (value) =>
-                  value == null || value.isEmpty ? 'Please enter your username' : null,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Please enter your username'
+                      : null,
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
@@ -241,7 +243,8 @@ class _SignUpPageState extends State<SignUpPage> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
-                    } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                        .hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -255,8 +258,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     border: OutlineInputBorder(),
                     labelStyle: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  validator: (value) =>
-                  value == null || value.isEmpty ? 'Please enter your name' : null,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Please enter your name'
+                      : null,
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
@@ -272,22 +276,32 @@ class _SignUpPageState extends State<SignUpPage> {
                   value: _selectedRole,
                   decoration: InputDecoration(
                     labelText: "Select Role",
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
                     labelStyle: Theme.of(context).textTheme.bodyLarge,
                   ),
                   items: _roles
                       .map((role) => DropdownMenuItem(
                     value: role,
-                    child: Text(role, style: Theme.of(context).textTheme.bodyLarge),
+                    child: Text(
+                      role,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
                   ))
                       .toList(),
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() {
                       _selectedRole = value;
                     });
+
                   },
-                  validator: (value) => value == null || value.isEmpty ? "Please select a role" : null,
+                  validator: (value) =>
+                  value == null || value.isEmpty ? "Please select a role" : null,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  dropdownColor: Theme.of(context).scaffoldBackgroundColor,
                 ),
+
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -298,7 +312,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     onPressed: handleSignUp,
                     child: Text(
                       "Sign Up",
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(color: Colors.white),
                     ),
                   ),
                 ),
@@ -309,4 +326,62 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
+
+  Future<void> _showTeamNameDialog(int userId) async {
+    TextEditingController teamNameController = TextEditingController();
+
+    String? teamName = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Enter Team Name"),
+          content: TextField(
+            controller: teamNameController,
+            decoration: const InputDecoration(
+              hintText: "Team Name",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close without saving
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                if (teamNameController.text.trim().isNotEmpty) {
+                  Navigator.of(context).pop(teamNameController.text.trim());
+                }
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (teamName != null) {
+      await _saveTeamToDatabase(teamName, userId);
+    }
+  }
+
+  Future<void> _saveTeamToDatabase(String teamName, int userId) async {
+    try {
+      final bool success = await db.createTeam({
+        "name": teamName,
+        "created_by": userId, // Use user ID from sign-up
+      });
+
+      if (success) {
+        print("✅ Team '$teamName' created successfully.");
+      } else {
+        print("❌ Error creating team.");
+      }
+    } catch (e) {
+      print("❌ Error saving team to database: $e");
+    }
+  }
+
+
 }

@@ -17,6 +17,7 @@ class _JobsPageState extends State<JobsPage> {
   List<Map<String, dynamic>> jobs = [];
   bool isLoading = true;
   int? currentUserId;
+  String? userRole;
 
   @override
   void initState() {
@@ -42,12 +43,25 @@ class _JobsPageState extends State<JobsPage> {
 
   Future<void> _fetchCurrentUserId() async {
     try {
-      currentUserId = await db.getCurrentUserId();
-      setState(() {});
+      int? userId = await db.getCurrentUserId();
+      if (userId != null) {
+        setState(() {
+          currentUserId = userId;
+        });
+
+        // ✅ Fetch and store user role in the local state variable
+        String fetchedRole = await db.getUserRoles(userId);
+        setState(() {
+          userRole = fetchedRole.trim().toUpperCase();
+        });
+
+        print("🔍 User Role Retrieved: $userRole");
+      }
     } catch (e) {
-      print("Error fetching current user ID: $e");
+      print("❌ Error fetching current user ID or role: $e");
     }
   }
+
 
   // Show dialog for adding a new job
   void _showAddJobDialog() {
@@ -160,87 +174,79 @@ class _JobsPageState extends State<JobsPage> {
             content: applicants.isEmpty
                 ? const Text("No applicants yet.")
                 : SizedBox(
-                    width: double.maxFinite,
-                    child: ListView.builder(
-                      itemCount: applicants.length,
-                      itemBuilder: (context, index) {
-                        final applicant = applicants[index];
-                        return ListTile(
-                          title: Text(applicant["username"]),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Email: ${applicant["email"]}"),
-                              const SizedBox(height: 5),
-                              Text("Resume: ${applicant["resume_link"]}"),
-                            ],
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'accept') {
-                                await db.updateApplicationStatus(
-                                  applicant["application_id"],
-                                  "accepted",
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Application accepted!"),
-                                  ),
-                                );
-                                Navigator.pop(context);
-                                _showApplicantsDialog(jobId); // Refresh
-                              } else if (value == 'reject') {
-                                await db.deleteApplication(
-                                  applicant["application_id"],
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Application rejected!"),
-                                  ),
-                                );
-                                Navigator.pop(context);
-                                _showApplicantsDialog(jobId); // Refresh
-                              }
-                            },
-                            itemBuilder: (BuildContext context) =>
-                                <PopupMenuEntry<String>>[
-                              const PopupMenuItem<String>(
-                                value: 'accept',
-                                child: Text('Accept'),
-                              ),
-                              const PopupMenuItem<String>(
-                                value: 'reject',
-                                child: Text('Reject'),
-                              ),
-                            ],
-                          ),
-                          onTap: () async {
-                            String url = applicant["resume_link"].trim();
-
-                            // Prepend https if missing
-                            if (!url.startsWith("http://") &&
-                                !url.startsWith("https://")) {
-                              url = "https://$url";
-                            }
-
-                            final Uri resumeUrl = Uri.parse(url);
-                            if (await canLaunchUrl(resumeUrl)) {
-                              await launchUrl(
-                                resumeUrl,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Could not open the CV link."),
-                                ),
-                              );
-                            }
-                          },
-                        );
-                      },
+              width: double.maxFinite,
+              child: ListView.builder(
+                itemCount: applicants.length,
+                itemBuilder: (context, index) {
+                  final applicant = applicants[index];
+                  return ListTile(
+                    title: Text(applicant["username"]),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Email: ${applicant["email"]}"),
+                        const SizedBox(height: 5),
+                        Text("Resume: ${applicant["resume_link"]}"),
+                      ],
                     ),
-                  ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) async {
+                        if (value == 'accept') {
+                          await _acceptApplicant(
+                            jobId,
+                            applicant["user_id"],
+                            applicant["application_id"],
+                          );
+                        } else if (value == 'reject') {
+                          await db.deleteApplication(
+                            applicant["application_id"],
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Application rejected!"),
+                            ),
+                          );
+                          Navigator.pop(context);
+                          _showApplicantsDialog(jobId);
+                        }
+                      },
+                      itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        const PopupMenuItem<String>(
+                          value: 'accept',
+                          child: Text('Accept'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'reject',
+                          child: Text('Reject'),
+                        ),
+                      ],
+                    ),
+                    onTap: () async {
+                      String url = applicant["resume_link"].trim();
+                      if (!url.startsWith("http://") &&
+                          !url.startsWith("https://")) {
+                        url = "https://$url";
+                      }
+
+                      final Uri resumeUrl = Uri.parse(url);
+                      if (await canLaunchUrl(resumeUrl)) {
+                        await launchUrl(
+                          resumeUrl,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Could not open the CV link."),
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -257,6 +263,7 @@ class _JobsPageState extends State<JobsPage> {
       );
     }
   }
+
 
   // Show dialog for applying to a job
   void _showCVDialog(int jobId) async {
@@ -356,15 +363,74 @@ class _JobsPageState extends State<JobsPage> {
               },
             ),
       floatingActionButton:
-          (widget.userRole == "team" || widget.userRole == "sponsor")
-              ? FloatingActionButton(
-                  onPressed: _showAddJobDialog,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.add),
-                )
-              : null,
+      (userRole != null &&
+          (userRole == "ROLE_TEAM" || userRole == "ROLE_SPONSOR"))
+          ? FloatingActionButton(
+        onPressed: _showAddJobDialog,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.add),
+      )
+          : null,
+
     );
   }
+
+  Future<void> _acceptApplicant(int jobId, int userId, int applicationId) async {
+    print("🟡 Accept button clicked: Job ID: $jobId, User ID: $userId, Application ID: $applicationId");
+
+    try {
+      // 1️⃣ Get the team ID associated with the job
+      final int? teamId = await db.getTeamIdByJobId(jobId);
+
+      if (teamId == null) {
+        print("❌ Error: No team found for job ID $jobId.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error: No team associated with this job.")),
+        );
+        return;
+      }
+
+      print("✅ Team ID found: $teamId. Adding user to team...");
+
+      // 2️⃣ Add the user to the team_members table
+      bool addedToTeam = await db.addUserToTeam(
+        teamId: teamId,
+        userId: userId,
+        role: "MEMBER",
+      );
+
+      if (!addedToTeam) {
+        print("❌ Error adding user to team.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error adding user to team.")),
+        );
+        return;
+      }
+
+      print("✅ User added to team successfully!");
+
+      // 3️⃣ Update application status to "Accepted"
+      await db.updateApplicationStatus(applicationId, "accepted");
+
+      print("✅ Application status updated to 'Accepted'");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Applicant accepted and added to team!")),
+      );
+
+      // Refresh UI
+      Navigator.pop(context);
+      _showApplicantsDialog(jobId);
+    } catch (e) {
+      print("❌ Error accepting applicant: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error accepting applicant.")),
+      );
+    }
+  }
+
+
+
 }

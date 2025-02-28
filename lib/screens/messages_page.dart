@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../sql.dart'; 
+import '../sql.dart';
 import 'chat_page.dart';
 
 class MessagesPage extends StatefulWidget {
@@ -77,7 +77,7 @@ class _MessagesPageState extends State<MessagesPage> {
               final username = conn["username"] ?? "Unknown";
 
               return Card(
-                color: Colors.grey[850],  // Dark color for card background
+                color: Colors.grey[850], // Dark color for card background
                 elevation: 2,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

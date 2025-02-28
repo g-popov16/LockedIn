@@ -33,7 +33,8 @@ class _EditJobPageState extends State<EditJobPage> {
     super.initState();
     _titleController = TextEditingController(text: widget.initialTitle);
     _companyController = TextEditingController(text: widget.initialCompany);
-    _descriptionController = TextEditingController(text: widget.initialDescription);
+    _descriptionController =
+        TextEditingController(text: widget.initialDescription);
   }
 
   @override
@@ -49,7 +50,9 @@ class _EditJobPageState extends State<EditJobPage> {
     final updatedCompany = _companyController.text.trim();
     final updatedDescription = _descriptionController.text.trim();
 
-    if (updatedTitle.isEmpty || updatedCompany.isEmpty || updatedDescription.isEmpty) {
+    if (updatedTitle.isEmpty ||
+        updatedCompany.isEmpty ||
+        updatedDescription.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("All fields must be filled!")),
       );

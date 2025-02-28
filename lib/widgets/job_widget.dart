@@ -68,18 +68,18 @@ class JobWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            timeAgo,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  timeAgo,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -88,32 +88,32 @@ class JobWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-          Text(
-            "Company: $company",
-            style: const TextStyle(fontSize: 14, color: Colors.white70),
-          ),
-          if (currentUserId != postedBy)
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserProfilePage(
-                userId: postedBy,
-                isCurrentUser: currentUserId == postedBy,
-              ),
-            ),
-                );
-              },
-              child: Text(
-                viewRoleText,
-                style: const TextStyle(
-            color: Colors.blueAccent,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+                Text(
+                  "Company: $company",
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
                 ),
-              ),
-            ),
+                if (currentUserId != postedBy)
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfilePage(
+                            userId: postedBy,
+                            isCurrentUser: currentUserId == postedBy,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      viewRoleText,
+                      style: const TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -129,62 +129,62 @@ class JobWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-          ElevatedButton(
-            onPressed: onApply,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE74C3C), // 'Apply' color
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              "Apply",
-              style: TextStyle(color: Colors.black),
-            ),
-          ),
-          // Buttons for the job poster
-          if (currentUserId == postedBy) ...[
-            ElevatedButton(
-              onPressed: onViewApplicants,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurpleAccent,
-                shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+                ElevatedButton(
+                  onPressed: onApply,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE74C3C), // 'Apply' color
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Apply",
+                    style: TextStyle(color: Colors.black),
+                  ),
                 ),
-              ),
-              child: const Text(
-                "View Applicants",
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Go to EditJobPage, pass in a callback to update the list
-                Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EditJobPage(
-                jobId: jobId,
-                initialTitle: title,
-                initialCompany: company,
-                initialDescription: description,
-                onJobUpdated: onJobUpdated, // triggers refresh
-              ),
-            ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange, // Edit job color
-                shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                "Edit",
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ],
+                // Buttons for the job poster
+                if (currentUserId == postedBy) ...[
+                  ElevatedButton(
+                    onPressed: onViewApplicants,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurpleAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "View Applicants",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Go to EditJobPage, pass in a callback to update the list
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditJobPage(
+                            jobId: jobId,
+                            initialTitle: title,
+                            initialCompany: company,
+                            initialDescription: description,
+                            onJobUpdated: onJobUpdated, // triggers refresh
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange, // Edit job color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Edit",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

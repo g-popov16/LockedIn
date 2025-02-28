@@ -5,44 +5,11 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-//android {
-//    namespace = "com.example.lockedin"
-//    compileSdk = flutter.compileSdkVersion
-//    ndkVersion = flutter.ndkVersion
-//
-//    compileOptions {
-//        sourceCompatibility = JavaVersion.VERSION_1_8
-//        targetCompatibility = JavaVersion.VERSION_1_8
-//    }
-//
-//    kotlinOptions {
-//        jvmTarget = JavaVersion.VERSION_1_8
-//    }
-//
-//    defaultConfig {
-//        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-//        applicationId = "com.example.lockedin"
-//        // You can update the following values to match your application needs.
-//        // For more information, see: https://flutter.dev/to/review-gradle-config.
-//        minSdk = flutter.minSdkVersion
-//        targetSdk = flutter.targetSdkVersion
-//        versionCode = flutter.versionCode
-//        versionName = flutter.versionName
-//    }
-//
-//    buildTypes {
-//        release {
-//            // TODO: Add your own signing config for the release build.
-//            // Signing with the debug keys for now, so `flutter run --release` works.
-//            signingConfig = signingConfigs.debug
-//        }
-//    }
-//}
-
 android {
     namespace = "com.example.lockedin"
-    compileSdk = 34  // Replace flutter.compileSdkVersion with 34
+    compileSdk = 34    // Or your desired compile SDK version
 
+    // Keep this if you’re using the NDK from Flutter
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -56,10 +23,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.lockedin"
-        minSdk = 26  // Replace flutter.minSdkVersion with 21
-        targetSdk = 34  // Replace flutter.targetSdkVersion with 34
-        versionCode = 1  // Replace flutter.versionCode with 1
-        versionName = "1.0.0"  // Replace flutter.versionName with "1.0.0"
+        minSdk = 26       // Or your desired min SDK
+        targetSdk = 34    // Or your desired target SDK
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     buildTypes {
@@ -69,19 +36,28 @@ android {
     }
 }
 
-
 flutter {
+    // Points to your Flutter project
     source = "../.."
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.21"
 
-    // REMOVE or COMMENT OUT the PostgreSQL dependency if the JAR includes it
+    // Add Firebase BOM if you plan to use Firebase products
+    implementation platform('com.google.firebase:firebase-bom:32.1.1')
+
+    // Example: Using Firebase Storage
+    implementation 'com.google.firebase:firebase-storage'
+
+    // If you want other Firebase services, add them here:
+    // implementation 'com.google.firebase:firebase-auth'
+    // implementation 'com.google.firebase:firebase-firestore'
+
+    // Remove or comment out any extra libraries you don’t need:
     // implementation 'org.postgresql:postgresql:42.2.20'
 }
 
-
-
+// Must be applied after the dependencies block
+apply plugin: 'com.google.gms.google-services'

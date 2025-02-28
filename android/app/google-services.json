@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "87236936005",
+    "project_id": "lockedin-f20db",
+    "storage_bucket": "lockedin-f20db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87236936005:android:9ed5c779aaa3b409617e2c",
+        "android_client_info": {
+          "package_name": "com.example.lockedin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe8bWFSUW-i20gyQgWp1I9gaJrSuEWTr4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

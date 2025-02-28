@@ -4,7 +4,8 @@ import 'package:timeago/timeago.dart' as timeago;
 
 class CommentsDialog extends StatefulWidget {
   final int postId;
-  final VoidCallback? onCommentAdded; // Callback to notify parent about comment addition
+  final VoidCallback?
+      onCommentAdded; // Callback to notify parent about comment addition
 
   const CommentsDialog({super.key, required this.postId, this.onCommentAdded});
 
@@ -52,7 +53,8 @@ class _CommentsDialogState extends State<CommentsDialog> {
         throw Exception("User ID not found");
       }
 
-      await db.addComment(postId: widget.postId, userId: currentUserId, content: commentText);
+      await db.addComment(
+          postId: widget.postId, userId: currentUserId, content: commentText);
       _commentController.clear();
 
       // Refresh the comments and notify parent
@@ -72,7 +74,8 @@ class _CommentsDialogState extends State<CommentsDialog> {
       heightFactor: 0.6,
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor, // Themed background color
+          color: Theme.of(context)
+              .scaffoldBackgroundColor, // Themed background color
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Padding(
@@ -108,8 +111,10 @@ class _CommentsDialogState extends State<CommentsDialog> {
                             itemCount: comments.length,
                             itemBuilder: (context, index) {
                               final comment = comments[index];
-                              final DateTime createdTime = DateTime.parse(comment['created_at']);
-                              final String timeAgo = timeago.format(createdTime);
+                              final DateTime createdTime =
+                                  DateTime.parse(comment['created_at']);
+                              final String timeAgo =
+                                  timeago.format(createdTime);
 
                               return ListTile(
                                 title: Text(
@@ -131,15 +136,19 @@ class _CommentsDialogState extends State<CommentsDialog> {
                     Expanded(
                       child: TextField(
                         controller: _commentController,
-                        style: Theme.of(context).textTheme.bodyLarge, // Themed input text
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge, // Themed input text
                         decoration: InputDecoration(
                           hintText: "Write a comment...",
-                          hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                          hintStyle:
+                              Theme.of(context).inputDecorationTheme.hintStyle,
                           filled: true,
                           fillColor: Theme.of(context).cardColor,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                               vertical: 10, horizontal: 15),
@@ -149,7 +158,8 @@ class _CommentsDialogState extends State<CommentsDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.send, color: Theme.of(context).primaryColor),
+                      icon: Icon(Icons.send,
+                          color: Theme.of(context).primaryColor),
                       onPressed: _addComment,
                     ),
                   ],

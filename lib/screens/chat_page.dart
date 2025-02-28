@@ -20,6 +20,7 @@ class _ChatPageState extends State<ChatPage> {
   final PostgresDB db = PostgresDB();
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
+  final ScrollController _scrollController = ScrollController();
 
   StreamSubscription<Map<String, dynamic>>? _messageSubscription;
   late int _currentUserId;
@@ -36,6 +37,11 @@ class _ChatPageState extends State<ChatPage> {
       setState(() {
         _messages.clear();
         _messages.addAll(messages);
+      });
+
+      // Scroll to bottom after loading chat history
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
       });
     } catch (e) {
       print("❌ Error loading chat history: $e");
@@ -60,9 +66,9 @@ class _ChatPageState extends State<ChatPage> {
       final receiver = newMsg["receiver_id"];
       final msgId = newMsg["id"];
 
-      final relevantChat = (sender == _currentUserId &&
-          receiver == widget.otherUserId) ||
-          (sender == widget.otherUserId && receiver == _currentUserId);
+      final relevantChat =
+          (sender == _currentUserId && receiver == widget.otherUserId) ||
+              (sender == widget.otherUserId && receiver == _currentUserId);
 
       if (!relevantChat) return;
 
@@ -72,20 +78,21 @@ class _ChatPageState extends State<ChatPage> {
         return;
       }
 
-      // ✅ Force UI update
+      // ✅ Update UI & Scroll Down
       setState(() {
         _messages.add(newMsg);
       });
+
+      _scrollToBottom();
     });
   }
 
-
-    void _sendMessage() async {
+  void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     try {
-      await db.ensureConnection(); // Make sure the database connection is open
+      await db.ensureConnection(); // Ensure database connection is open
       await db.sendMessage(
         senderId: _currentUserId,
         receiverId: widget.otherUserId,
@@ -100,26 +107,40 @@ class _ChatPageState extends State<ChatPage> {
           "sender_id": _currentUserId,
           "receiver_id": widget.otherUserId,
           "content": text,
-          "created_at": DateTime.now().toIso8601String(), // Fake timestamp for immediate UI update
+          "created_at": DateTime.now()
+              .toIso8601String(), // Fake timestamp for immediate UI update
         });
       });
+
+      _scrollToBottom();
     } catch (e) {
       print("❌ Error sending message: $e");
     }
   }
 
+  void _scrollToBottom() {
+    if (_messages.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+  }
 
   @override
   void dispose() {
     _messageSubscription?.cancel();
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Dark background
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: Text("Chat with ${widget.otherUsername}"),
@@ -133,6 +154,7 @@ class _ChatPageState extends State<ChatPage> {
             child: Container(
               color: Colors.grey[900],
               child: ListView.builder(
+                controller: _scrollController, // ✅ Add ScrollController
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
@@ -193,7 +215,7 @@ class _ChatPageState extends State<ChatPage> {
           // Message input area
           Padding(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Fix for iPhone home indicator
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -227,7 +249,6 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           )
-
         ],
       ),
     );

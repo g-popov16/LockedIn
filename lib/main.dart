@@ -8,69 +8,77 @@ import 'home_page.dart'; // MainPage after successful sign-in
 import 'dart:async';
 
 Future<void> main() async {
-  
   WidgetsFlutterBinding.ensureInitialized(); // Ensure plugins are initialized
   await Firebase.initializeApp();
-  runApp(const LinkedInSignInApp());
+  runApp(const LockedIn ());
 }
 
-class LinkedInSignInApp extends StatelessWidget {
-  const LinkedInSignInApp({super.key});
+class LockedIn  extends StatelessWidget {
+  const LockedIn ({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-  // Scaffold and background colors
-  scaffoldBackgroundColor: const Color(0xFF1E1E1E),
-  primaryColor: const Color(0xFFE74C3C), // Accent color for buttons
-  inputDecorationTheme: const InputDecorationTheme(
-      hintStyle: TextStyle(color: Colors.grey), // Keeps hint text grey
-    ),
+        // Scaffold and background colors
+        scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+        primaryColor: const Color(0xFFE74C3C), // Accent color for buttons
+        inputDecorationTheme: const InputDecorationTheme(
+          hintStyle: TextStyle(color: Colors.grey), // Keeps hint text grey
+        ),
 
-  // Updated TextTheme
-  textTheme: const TextTheme(
-    displayLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), // headline1 replacement
-    titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), // headline6 replacement
-    bodyLarge: TextStyle(fontSize: 16, color: Colors.white), // bodyText1 replacement
-    bodyMedium: TextStyle(fontSize: 14, color: Colors.white70), // bodyText2 replacement
-  ),
+        // Updated TextTheme
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white), // headline1 replacement
+          titleLarge: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white), // headline6 replacement
+          bodyLarge: TextStyle(
+              fontSize: 16, color: Colors.white), // bodyText1 replacement
+          bodyMedium: TextStyle(
+              fontSize: 14, color: Colors.white70), // bodyText2 replacement
+        ),
 
-  // AppBar theme
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFF2C3E50), // Dark grey
-    iconTheme: IconThemeData(color: Colors.white),
-    titleTextStyle: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
+        // AppBar theme
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2C3E50), // Dark grey
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
 
-  // BottomNavigationBar theme
-  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-    backgroundColor: Color(0xFF2C3E50), // Same as AppBar for consistency
-    selectedItemColor: Color(0xFFE74C3C), // Accent red for selected items
-    unselectedItemColor: Colors.white70,
-  ),
+        // BottomNavigationBar theme
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFF2C3E50), // Same as AppBar for consistency
+          selectedItemColor: Color(0xFFE74C3C), // Accent red for selected items
+          unselectedItemColor: Colors.white70,
+        ),
 
-  // Card theme
-  cardColor: const Color(0xFF2C2C2C), // Slightly lighter than scaffold background
-  cardTheme: CardTheme(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    elevation: 2,
-    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-  ),
+        // Card theme
+        cardColor: const Color(
+            0xFF2C2C2C), // Slightly lighter than scaffold background
+        cardTheme: CardTheme(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        ),
 
-  // FloatingActionButton theme
-  floatingActionButtonTheme: const FloatingActionButtonThemeData(
-    backgroundColor: Color(0xFFE74C3C),
-    foregroundColor: Colors.white, // Icon color
-  ),
-),
+        // FloatingActionButton theme
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFFE74C3C),
+          foregroundColor: Colors.white, // Icon color
+        ),
+      ),
 
       home: const SplashScreen(), // Start with the SplashScreen
     );
@@ -84,7 +92,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
   String _displayText = "";
@@ -123,7 +132,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     print("DEBUG: Email from session in SplashScreen: $email");
 
-    await Future.delayed(const Duration(seconds: 1)); // Ensure SharedPreferences is fully loaded
+    await Future.delayed(
+        const Duration(seconds: 1)); // Ensure SharedPreferences is fully loaded
 
     if (email != null) {
       print("DEBUG: Navigating to HomePage with email: $email");
@@ -141,7 +151,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       );
     }
   }
-
 
   @override
   void dispose() {
@@ -171,17 +180,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 }
 
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()), // Show a loading spinner
-    );
-  }
-
-
+@override
+Widget build(BuildContext context) {
+  return const Scaffold(
+    body: Center(child: CircularProgressIndicator()), // Show a loading spinner
+  );
+}
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -219,7 +223,9 @@ class _SignInPageState extends State<SignInPage> {
 
         if (user == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No account found with that email.', style: Theme.of(context).textTheme.bodyMedium)),
+            SnackBar(
+                content: Text('No account found with that email.',
+                    style: Theme.of(context).textTheme.bodyMedium)),
           );
           return;
         }
@@ -229,7 +235,9 @@ class _SignInPageState extends State<SignInPage> {
 
         if (!isPasswordCorrect) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid password. Please try again.', style: Theme.of(context).textTheme.bodyMedium)),
+            SnackBar(
+                content: Text('Invalid password. Please try again.',
+                    style: Theme.of(context).textTheme.bodyMedium)),
           );
           return;
         }
@@ -245,7 +253,8 @@ class _SignInPageState extends State<SignInPage> {
         print("✅ User data saved to SharedPreferences!");
 
         // ✅ Debug: Check if email is actually saved
-        print("DEBUG: Saved Email in SharedPreferences: ${prefs.getString('currentUserEmail')}");
+        print(
+            "DEBUG: Saved Email in SharedPreferences: ${prefs.getString('currentUserEmail')}");
 
         Navigator.pushReplacement(
           context,
@@ -255,17 +264,19 @@ class _SignInPageState extends State<SignInPage> {
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error during sign-in: $e', style: Theme.of(context).textTheme.bodyMedium)),
+          SnackBar(
+              content: Text('Error during sign-in: $e',
+                  style: Theme.of(context).textTheme.bodyMedium)),
         );
       }
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Themed background
+      backgroundColor:
+          Theme.of(context).scaffoldBackgroundColor, // Themed background
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
@@ -294,14 +305,16 @@ class _SignInPageState extends State<SignInPage> {
                     labelText: 'Email Address',
                     labelStyle: Theme.of(context).textTheme.bodyLarge,
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).primaryColor),
                     ),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
-                    } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                        .hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -315,7 +328,8 @@ class _SignInPageState extends State<SignInPage> {
                     labelText: 'Password',
                     labelStyle: Theme.of(context).textTheme.bodyLarge,
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).primaryColor),
                     ),
                   ),
                   obscureText: true,
@@ -331,12 +345,16 @@ class _SignInPageState extends State<SignInPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor, // Themed button color
+                      backgroundColor:
+                          Theme.of(context).primaryColor, // Themed button color
                     ),
                     onPressed: _handleSignIn,
                     child: Text(
                       "Sign In",
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(color: Colors.white),
                     ),
                   ),
                 ),
@@ -354,7 +372,10 @@ class _SignInPageState extends State<SignInPage> {
                     },
                     child: Text(
                       "Don't have an account? Create one",
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).primaryColor),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(color: Theme.of(context).primaryColor),
                     ),
                   ),
                 ),
@@ -366,4 +387,3 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 }
-

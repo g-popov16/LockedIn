@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class PostWidget extends StatefulWidget {
@@ -8,11 +9,12 @@ class PostWidget extends StatefulWidget {
   final String username;
   final int likes;
   final String createdAt;
-  final int commentsCount;
-  final VoidCallback? onLikePressed;
   final VoidCallback? onCommentPressed;
   final VoidCallback? onNicknameTap;
   final String? profileImageUrl;
+  final String? imageUrl; // ✅ Image URL for post
+  final bool isLiked;
+  final VoidCallback? onLikePressed;
 
   const PostWidget({
     super.key,
@@ -20,13 +22,14 @@ class PostWidget extends StatefulWidget {
     required this.content,
     required this.userId,
     required this.username,
-    required this.likes,
+    this.likes = 0,
     required this.createdAt,
-    required this.commentsCount,
-    this.onLikePressed,
     this.onCommentPressed,
     this.onNicknameTap,
     this.profileImageUrl,
+    this.imageUrl,
+    this.isLiked = false,
+    this.onLikePressed,
   });
 
   @override
@@ -34,12 +37,20 @@ class PostWidget extends StatefulWidget {
 }
 
 class _PostWidgetState extends State<PostWidget> {
-  bool isLikedState = false;
+  late bool isLikedState;
+  @override
+  void initState() {
+    super.initState();
+    isLikedState = widget.isLiked;
+  }
 
   @override
   Widget build(BuildContext context) {
     final DateTime createdTime = DateTime.parse(widget.createdAt);
     final String timeAgo = timeago.format(createdTime);
+    final int totalLikes = (widget.likes ?? 0) + (isLikedState ? 1 : 0);
+    debugPrint("🖼️ PostWidget Debug - Post ID: ${widget.postId}, Image URL: ${widget.imageUrl ?? 'No Image'}");
+
 
     return Card(
       color: const Color(0xFF343a40), // Dark card color
@@ -84,6 +95,34 @@ class _PostWidgetState extends State<PostWidget> {
               widget.content,
               style: const TextStyle(fontSize: 14, color: Colors.white70),
             ),
+            const SizedBox(height: 8),
+
+            // Load Image Separately Using FutureBuilder
+            // Load Image Separately Using FutureBuilder
+            if (widget.imageUrl?.isNotEmpty ?? false)
+              Container(
+                height: 250, // ✅ Set a fixed height for all images
+                width: double.infinity, // ✅ Make it take full width
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.grey[800], // ✅ Background color for consistency
+                ),
+                clipBehavior: Clip.hardEdge, // ✅ Ensure rounded corners apply
+                child: CachedNetworkImage(
+                  imageUrl: widget.imageUrl!,
+                  fit: BoxFit.cover, // ✅ Ensures the image scales correctly
+                  placeholder: (context, url) => Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  errorWidget: (context, url, error) => Icon(
+                    Icons.broken_image,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+
+
             const SizedBox(height: 12),
 
             // Like, comment, and timestamp
@@ -104,10 +143,7 @@ class _PostWidgetState extends State<PostWidget> {
                         widget.onLikePressed?.call();
                       },
                     ),
-                    Text(
-                      '${widget.likes + (isLikedState ? 1 : 0)} Likes',
-                      style: const TextStyle(fontSize: 12, color: Colors.white),
-                    ),
+                    Text('$totalLikes Likes'),
                   ],
                 ),
                 GestureDetector(
@@ -117,8 +153,9 @@ class _PostWidgetState extends State<PostWidget> {
                       const Icon(Icons.comment, color: Colors.white70),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.commentsCount} Comments',
-                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                        ' Comments',
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
                   ),
@@ -133,5 +170,9 @@ class _PostWidgetState extends State<PostWidget> {
         ),
       ),
     );
+  }
+
+  Future<String> _loadImage(String imageUrl) async {
+    return imageUrl;
   }
 }
