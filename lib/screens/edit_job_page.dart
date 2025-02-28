@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../sql.dart'; // Ensure this matches your actual import path
+import '../sql.dart';
 
 class EditJobPage extends StatefulWidget {
   final int jobId;
   final String initialTitle;
   final String initialCompany;
   final String initialDescription;
-  final VoidCallback onJobUpdated; // Callback to notify parent to refresh
+  final VoidCallback onJobUpdated;
 
   const EditJobPage({
     super.key,
@@ -33,8 +33,7 @@ class _EditJobPageState extends State<EditJobPage> {
     super.initState();
     _titleController = TextEditingController(text: widget.initialTitle);
     _companyController = TextEditingController(text: widget.initialCompany);
-    _descriptionController =
-        TextEditingController(text: widget.initialDescription);
+    _descriptionController = TextEditingController(text: widget.initialDescription);
   }
 
   @override
@@ -50,9 +49,7 @@ class _EditJobPageState extends State<EditJobPage> {
     final updatedCompany = _companyController.text.trim();
     final updatedDescription = _descriptionController.text.trim();
 
-    if (updatedTitle.isEmpty ||
-        updatedCompany.isEmpty ||
-        updatedDescription.isEmpty) {
+    if (updatedTitle.isEmpty || updatedCompany.isEmpty || updatedDescription.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("All fields must be filled!")),
       );
@@ -69,10 +66,9 @@ class _EditJobPageState extends State<EditJobPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Job updated successfully!")),
       );
-      widget.onJobUpdated(); // Notify the parent page to refresh
-      Navigator.pop(context); // Close EditJobPage
+      widget.onJobUpdated();
+      Navigator.pop(context);
     } catch (e) {
-      print("Error saving job: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to update the job.")),
       );
@@ -85,10 +81,9 @@ class _EditJobPageState extends State<EditJobPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Job deleted successfully!")),
       );
-      widget.onJobUpdated(); // Notify the parent page to refresh
-      Navigator.pop(context); // Close EditJobPage
+      widget.onJobUpdated();
+      Navigator.pop(context);
     } catch (e) {
-      print("Error deleting job: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to delete the job.")),
       );
@@ -97,68 +92,87 @@ class _EditJobPageState extends State<EditJobPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Job"),
-        backgroundColor: Colors.grey[900],
+        title: Text("Edit Job", style: theme.textTheme.titleLarge),
+        backgroundColor: theme.appBarTheme.backgroundColor,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Title
+            // Job Title
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(
+              style: theme.textTheme.bodyLarge,
+              decoration: InputDecoration(
                 labelText: "Job Title",
-                border: OutlineInputBorder(),
+                labelStyle: theme.textTheme.bodyLarge,
+                hintText: "Enter job title",
+                hintStyle: theme.textTheme.bodyMedium,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.white70),
+                ),
+                filled: true,
+                fillColor: theme.scaffoldBackgroundColor,
               ),
             ),
             const SizedBox(height: 10),
 
-            // Company
+            // Company Name
             TextField(
               controller: _companyController,
-              decoration: const InputDecoration(
+              style: theme.textTheme.bodyLarge,
+              decoration: InputDecoration(
                 labelText: "Company Name",
-                border: OutlineInputBorder(),
+                labelStyle: theme.textTheme.bodyLarge,
+                hintText: "Enter company name",
+                hintStyle: theme.textTheme.bodyMedium,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.white70),
+                ),
+                filled: true,
+                fillColor: theme.scaffoldBackgroundColor,
               ),
             ),
             const SizedBox(height: 10),
 
-            // Description
+            // Job Description
             TextField(
               controller: _descriptionController,
-              decoration: const InputDecoration(
+              style: theme.textTheme.bodyLarge,
+              decoration: InputDecoration(
                 labelText: "Job Description",
-                border: OutlineInputBorder(),
+                labelStyle: theme.textTheme.bodyLarge,
+                hintText: "Enter job description",
+                hintStyle: theme.textTheme.bodyMedium,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.white70),
+                ),
+                filled: true,
+                fillColor: theme.scaffoldBackgroundColor,
               ),
               maxLines: 5,
             ),
             const SizedBox(height: 20),
 
-            // Save + Delete Buttons
+            // Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 ElevatedButton(
                   onPressed: _deleteJob,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                   child: const Text("Delete Job"),
                 ),
                 ElevatedButton(
                   onPressed: _saveChanges,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
                   child: const Text("Save Changes"),
                 ),
               ],

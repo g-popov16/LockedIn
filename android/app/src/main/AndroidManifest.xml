@@ -13,6 +13,8 @@
         android:label="lockedin"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
 
         <activity
             android:name=".MainActivity"
@@ -44,10 +46,31 @@
 
     <!-- 🔹 4. Required for Flutter to Handle Text Processing -->
     <queries>
+        <!-- Allow processing text -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- Allow opening web links -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="http"/>
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="https"/>
+        </intent>
+
+
+        <!-- Allow URL launcher to use common browsers -->
+        <package android:name="com.android.chrome"/>
+        <package android:name="com.android.browser"/>
+        <package android:name="com.sec.android.app.sbrowser"/>
     </queries>
+
 
 </manifest>

@@ -32,7 +32,6 @@ class _CommentsDialogState extends State<CommentsDialog> {
         comments = fetchedComments;
       });
     } catch (e) {
-      print("Error fetching comments: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to load comments.")),
       );
@@ -61,7 +60,6 @@ class _CommentsDialogState extends State<CommentsDialog> {
       await _fetchComments();
       widget.onCommentAdded?.call();
     } catch (e) {
-      print("Error adding comment: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to add comment.")),
       );

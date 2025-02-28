@@ -19,7 +19,6 @@ class FirebaseStorageService {
 
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
-      print("❌ Error uploading file: $e");
       return null;
     }
   }

@@ -130,13 +130,11 @@ class _SplashScreenState extends State<SplashScreen>
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('currentUserEmail');
 
-    print("DEBUG: Email from session in SplashScreen: $email");
 
     await Future.delayed(
         const Duration(seconds: 1)); // Ensure SharedPreferences is fully loaded
 
     if (email != null) {
-      print("DEBUG: Navigating to HomePage with email: $email");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -144,7 +142,6 @@ class _SplashScreenState extends State<SplashScreen>
         ),
       );
     } else {
-      print("DEBUG: No session found. Navigating to SignInPage.");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const SignInPage()),
@@ -250,11 +247,8 @@ class _SignInPageState extends State<SignInPage> {
         await prefs.setString('profilePic', user['profile_pic_url'] ?? '');
         await prefs.setString('role', user['role'] ?? '');
 
-        print("✅ User data saved to SharedPreferences!");
 
         // ✅ Debug: Check if email is actually saved
-        print(
-            "DEBUG: Saved Email in SharedPreferences: ${prefs.getString('currentUserEmail')}");
 
         Navigator.pushReplacement(
           context,

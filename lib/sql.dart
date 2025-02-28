@@ -33,18 +33,15 @@ class PostgresDB {
 
   Future<void> openConnection() async {
     if (_connection != null && !_connection!.isClosed) {
-      print("✅ Connection is already open. No need to reopen.");
       return;
     }
     _connection = _createConnection();
     try {
       await _connection!.open();
-      print("✅ Database connected!");
 
       // Ensure LISTEN starts properly
       await listenForNewMessages();
     } catch (e) {
-      print("❌ Error connecting to database: $e");
       rethrow;
     }
   }
@@ -54,12 +51,10 @@ class PostgresDB {
 
   Future<void> ensureConnection() async {
     if (_connection != null && !_connection!.isClosed) {
-      print("✅ Connection is already open.");
       return;
     }
 
     if (_isOpeningConnection) {
-      print("🛑 Connection is already being established. Waiting...");
       await _connectionCompleter?.future;
       return;
     }
@@ -67,19 +62,16 @@ class PostgresDB {
     _isOpeningConnection = true;
     _connectionCompleter = Completer<void>();
 
-    print("🔄 Reopening a new database connection...");
 
     try {
       _connection = _createConnection();
       await _connection!.open();
-      print("✅ Database reconnected successfully!");
 
-      // ✅ Restart message listener after reconnecting
+      //  Restart message listener after reconnecting
       await listenForNewMessages();
 
       _connectionCompleter?.complete();
     } catch (e) {
-      print("❌ Error reopening database connection: $e");
       _connectionCompleter?.completeError(e);
     } finally {
       _isOpeningConnection = false;
@@ -87,31 +79,25 @@ class PostgresDB {
   }
 
   void _restartMessageStream() {
-    print("🔄 Restarting message listener...");
 
     // Close the existing stream safely
     _messageStreamController.close().then((_) {
-      print("🔁 Stream closed, restarting listener...");
 
       // Create a new stream inside the same object without reassigning
       _listenForNewMessages();
     });
 
-    print("✅ Message listener restarted!");
   }
 
   void _listenForNewMessages() async {
     if (_connection == null || _connection!.isClosed) {
-      print("⚠️ Database connection is closed. Cannot listen for messages.");
       return;
     }
 
-    print("👂 Listening for new messages...");
 
     await _connection!.execute("LISTEN new_message_event;");
 
     _connection!.notifications.listen((event) {
-      print("📩 New message received: ${event.payload}");
 
       try {
         final newMessage = jsonDecode(event.payload) as Map<String, dynamic>;
@@ -119,58 +105,45 @@ class PostgresDB {
           _messageStreamController.add(newMessage);
         }
       } catch (e) {
-        print("❌ Error parsing new message: $e");
       }
     });
 
-    print("✅ Message listener set up successfully.");
   }
 
   Future<void> closeConnection({bool clearSession = false}) async {
     if (_connection != null && !_connection!.isClosed) {
-      print("⚠️ Closing database connection...");
 
       if (clearSession) {
-        print("! Clearing user session...");
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('currentUserEmail');
       }
 
-      print("✅ Database remains open.");
     }
   }
 
   // (NEW) Listen for notifications on 'new_message'
   Future<void> listenForNewMessages() async {
     if (_connection == null || _connection!.isClosed) {
-      print("⚠️ Database connection is closed. Cannot listen for messages.");
       return;
     }
 
-    print("👂 Listening for new messages...");
 
     await _connection!.execute("LISTEN new_message;");
-    print("✅ LISTEN command executed successfully.");
 
     _connection!.notifications.listen((event) {
-      print(
-          "🔔 Received NOTIFY event: ${event.channel}, payload: ${event.payload}");
 
       if (event.channel == 'new_message') {
         try {
           final payload = jsonDecode(event.payload);
-          print("📩 New message received: $payload");
 
           if (!_messageStreamController.isClosed) {
             _messageStreamController.add(payload);
           }
         } catch (e) {
-          print("❌ Error parsing NOTIFY payload: $e");
         }
       }
     });
 
-    print("✅ Message listener is running.");
   }
 
   // (NEW) Helper to send a new message
@@ -190,9 +163,7 @@ class PostgresDB {
         'senderId': senderId,
         'receiverId': receiverId,
       });
-      print("✅ Message inserted. Trigger should notify automatically.");
     } catch (e) {
-      print("Error sending message: $e");
       throw Exception("Failed to send message.");
     }
   }
@@ -238,7 +209,6 @@ class PostgresDB {
         return result.first[0] as String;
       }
     } catch (e) {
-      print("❌ Error fetching email from database: $e");
     }
 
     return null;
@@ -261,14 +231,12 @@ class PostgresDB {
 
       if (result.isNotEmpty) {
         String fetchedRole = result.first[0] as String;
-        print("Fetched role for user $userId: $fetchedRole"); // Debugging
+        // Debugging
         return fetchedRole;
       } else {
-        print("⚠️ No role found for user $userId");
         return "Unknown Role";
       }
     } catch (e) {
-      print(" Error fetching user role: $e");
       return "Unknown Role";
     }
   }
@@ -276,7 +244,6 @@ class PostgresDB {
   // Sign in
   Future<Map<String, dynamic>?> signIn(String email, String password) async {
     await ensureConnection(); // Ensure database connection is open
-    print("🟢 Signing in user: $email");
 
     try {
       final results = await _connection!.query(
@@ -306,18 +273,15 @@ class PostgresDB {
           "roles": userRoles,
         };
 
-        // ✅ Save email & user details to SharedPreferences
+        //  Save email & user details to SharedPreferences
         await _saveUserToPreferences(user);
 
-        print("✅ User signed in successfully!");
 
         return user;
       } else {
-        print("⚠️ User not found.");
         return null;
       }
     } catch (e) {
-      print("❌ Error during sign-in: $e");
       return null;
     }
   }
@@ -330,7 +294,6 @@ class PostgresDB {
     await prefs.setString('profilePic', user['profile_pic_url'] ?? '');
     await prefs.setString('role', user['roles'] ?? '');
 
-    print("✅ User data saved to SharedPreferences!");
   }
 
   // Sign up
@@ -355,7 +318,6 @@ class PostgresDB {
       );
 
       if (insertedUser.isEmpty) {
-        print("⚠️ Sign-up failed: No user was created.");
         return false;
       }
 
@@ -374,15 +336,13 @@ class PostgresDB {
         },
       );
 
-      // ✅ Save email & user ID in SharedPreferences
+      //  Save email & user ID in SharedPreferences
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', userData["email"]);
       await prefs.setInt('user_id', newUserId);
 
-      print("✅ User created successfully! ID: $newUserId");
       return true;
     } catch (e) {
-      print("❌ Error during sign-up: $e");
       return false;
     }
   }
@@ -401,7 +361,6 @@ class PostgresDB {
       });
 
       if (userResults.isEmpty) {
-        print("No user found for email: $email");
         return null;
       }
 
@@ -435,7 +394,6 @@ class PostgresDB {
 
       return user;
     } catch (e) {
-      print("Error during getUserByEmail: $e");
       return null;
     }
   }
@@ -521,9 +479,7 @@ class PostgresDB {
         },
       );
 
-      print("✅ Post created successfully!");
     } catch (e) {
-      print("❌ Error creating post: $e");
       throw Exception("Failed to create post: $e");
     }
   }
@@ -605,9 +561,7 @@ class PostgresDB {
           'createdAt': timestamp,
         },
       );
-      print("Comment added successfully!");
     } catch (e) {
-      print("Error during addComment: $e");
       throw Exception("Failed to add comment: $e");
     }
   }
@@ -637,7 +591,6 @@ class PostgresDB {
         };
       }).toList();
     } catch (e) {
-      print("Error during getComments: $e");
       return [];
     }
   }
@@ -664,9 +617,7 @@ class PostgresDB {
           'postedBy': postedBy,
         },
       );
-      print("Job added successfully!");
     } catch (e) {
-      print("Error adding job: $e");
       throw Exception("Failed to add job");
     }
   }
@@ -699,7 +650,6 @@ class PostgresDB {
         };
       }).toList();
     } catch (e) {
-      print("Error fetching jobs: $e");
       return [];
     }
   }
@@ -750,10 +700,8 @@ class PostgresDB {
         };
       }).toList();
 
-      print("✅ Applicants fetched: $applicants");
       return applicants;
     } catch (e) {
-      print("❌ Error fetching applicants: $e");
       return [];
     }
   }
@@ -820,7 +768,6 @@ class PostgresDB {
 
       return {"posts": posts, "jobs": jobs};
     } catch (e) {
-      print("Error fetching posts and jobs: $e");
       return {"posts": [], "jobs": []};
     }
   }
@@ -838,14 +785,11 @@ class PostgresDB {
 
       if (result.isNotEmpty) {
         final userId = result.first[0] as int;
-        print("🔍 [SUCCESS] Retrieved User ID from database: $userId");
         return userId;
       } else {
-        print("⚠️ [ERROR] User not found in database.");
         return null;
       }
     } catch (e) {
-      print("❌ [DB ERROR] Failed to fetch user ID: $e");
       return null;
     }
   }
@@ -889,12 +833,9 @@ class PostgresDB {
       });
 
       if (result.affectedRowCount == 0) {
-        print("No rows were updated. Check if the row exists.");
       } else {
-        print("Connection request accepted successfully!");
       }
     } catch (e) {
-      print("Error accepting connection request: $e");
     }
   }
 
@@ -908,7 +849,6 @@ class PostgresDB {
       ''',
       substitutionValues: {'requestId': requestId},
     );
-    print("Connection request declined: $requestId");
   }
 
   // Get connection requests for a user
@@ -945,7 +885,6 @@ class PostgresDB {
       ''',
       substitutionValues: {'newBio': newBio, 'userId': userId},
     );
-    print("Bio updated for user $userId");
   }
 
   // Send a connection request
@@ -965,9 +904,7 @@ class PostgresDB {
           'connectionId': connectionId,
         },
       );
-      print("Connection request sent successfully!");
     } catch (e) {
-      print("Error sending connection request: $e");
       throw Exception("Failed to send connection request.");
     }
   }
@@ -989,7 +926,6 @@ class PostgresDB {
       if (result.isEmpty) return "not_connected";
       return result.first[0] as String;
     } catch (e) {
-      print("Error fetching connection status: $e");
       return "not_connected";
     }
   }
@@ -1012,9 +948,7 @@ class PostgresDB {
           'connectionId': connectionId,
         },
       );
-      print("Connection request canceled successfully!");
     } catch (e) {
-      print("Error canceling connection request: $e");
       throw Exception("Failed to cancel connection request.");
     }
   }
@@ -1036,9 +970,7 @@ class PostgresDB {
           'connectionId': connectionId,
         },
       );
-      print("Connection removed successfully!");
     } catch (e) {
-      print("Error removing connection: $e");
       throw Exception("Failed to remove connection.");
     }
   }
@@ -1057,9 +989,7 @@ class PostgresDB {
           'status': status,
         },
       );
-      print("Application $applicationId updated to $status.");
     } catch (e) {
-      print("Error updating application status: $e");
       throw Exception("Failed to update application status.");
     }
   }
@@ -1076,9 +1006,7 @@ class PostgresDB {
           'applicationId': applicationId,
         },
       );
-      print("Application $applicationId deleted successfully.");
     } catch (e) {
-      print("Error deleting application: $e");
       throw Exception("Failed to delete application.");
     }
   }
@@ -1104,9 +1032,7 @@ class PostgresDB {
           'company': company,
         },
       );
-      print("Job $jobId updated successfully.");
     } catch (e) {
-      print("Error updating job: $e");
       throw Exception("Failed to update job.");
     }
   }
@@ -1123,9 +1049,7 @@ class PostgresDB {
           'jobId': jobId,
         },
       );
-      print("Job $jobId deleted successfully.");
     } catch (e) {
-      print("Error deleting job: $e");
       throw Exception("Failed to delete job.");
     }
   }
@@ -1183,15 +1107,13 @@ class PostgresDB {
         };
       }).toList();
     } catch (e) {
-      print("❌ Error fetching chat history: $e");
       return [];
     }
   }
 
   Future<void> signOut() async {
-    print("🔴 Logging out user...");
 
-    // ✅ Only clear session when explicitly signing out
+    //  Only clear session when explicitly signing out
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('currentUserEmail');
     await prefs.remove('currentUserId');
@@ -1199,7 +1121,6 @@ class PostgresDB {
     await prefs.remove('profilePic');
     await prefs.remove('role');
 
-    print("✅ User logged out successfully. Database remains open.");
   }
 
   Future<Map<String, dynamic>?> getUserById(int userId) async {
@@ -1207,7 +1128,7 @@ class PostgresDB {
 
     try {
       final result = await _connection!.query('''
-    SELECT id, username, bio, profile_pic_url  -- ✅ Fetch profile_pic_url
+    SELECT id, username, bio, profile_pic_url  --  Fetch profile_pic_url
     FROM users
     WHERE id = @userId
     ''', substitutionValues: {'userId': userId});
@@ -1223,11 +1144,10 @@ class PostgresDB {
         "id": row[0],
         "username": row[1],
         "bio": row[2],
-        "profile_pic_url": row[3], // ✅ Return profile_pic_url
+        "profile_pic_url": row[3], //  Return profile_pic_url
         "roles": roles,
       };
     } catch (e) {
-      print("❌ Error fetching user by ID: $e");
       return null;
     }
   }
@@ -1242,21 +1162,17 @@ class PostgresDB {
 
       if (result.isNotEmpty && result.first[0] != null) {
         final String oidStr = result.first[0].toString();
-        print("🔍 Found test image OID: $oidStr");
         return oidStr;
       } else {
-        print("❌ No test image found in posts.");
         return null;
       }
     } catch (e) {
-      print("❌ Error fetching test image OID: $e");
       return null;
     }
   }
 
   Future<bool> updateUserProfilePicture(
       int userId, String profilePicUrl) async {
-    print("📌 Updating profile picture URL in database for user ID: $userId");
 
     try {
       await _connection!.query(
@@ -1267,11 +1183,8 @@ class PostgresDB {
         },
       );
 
-      print("✅ Profile picture URL updated successfully.");
       return true;
     } catch (e, stacktrace) {
-      print("❌ Error updating profile picture URL: $e");
-      print("🛑 Stacktrace:\n$stacktrace");
       return false;
     }
   }
@@ -1290,7 +1203,6 @@ class PostgresDB {
 
       return result.isNotEmpty;
     } catch (e) {
-      print("❌ Error creating team: $e");
       return false;
     }
   }
@@ -1310,14 +1222,11 @@ class PostgresDB {
 
       if (result.isNotEmpty && result[0][0] != null) {
         int teamId = int.tryParse(result[0][0].toString()) ?? -1;
-        print("✅ Team ID for Job $jobId: $teamId");
         return teamId;
       } else {
-        print("❌ No team found for Job ID $jobId");
         return null;
       }
     } catch (e) {
-      print("❌ Error fetching team ID for job: $e");
       return null;
     }
   }
@@ -1340,7 +1249,6 @@ class PostgresDB {
       );
       return true;
     } catch (e) {
-      print("❌ Error adding user to team: $e");
       return false;
     }
   }
@@ -1375,7 +1283,6 @@ class PostgresDB {
 
       return null;
     } catch (e) {
-      print("❌ Error fetching team for user $userId: $e");
       return null;
     }
   }
@@ -1408,7 +1315,6 @@ class PostgresDB {
         "username": row[1] as String,
       }).toList();
     } catch (e) {
-      print("❌ Error fetching team members for team $teamId: $e");
       return [];
     }
   }
@@ -1419,7 +1325,7 @@ class PostgresDB {
     await ensureConnection();
 
     try {
-      // ✅ First, check if the user is the team leader
+      //  First, check if the user is the team leader
       final leaderCheck = await _connection!.query(
         '''
       SELECT 1 FROM teams WHERE created_by = @userId AND id = @teamId
@@ -1428,11 +1334,10 @@ class PostgresDB {
       );
 
       if (leaderCheck.isNotEmpty) {
-        print("❌ Cannot leave team: User $userId is the team leader.");
         return false; // Prevent the leader from leaving
       }
 
-      // ✅ If not the leader, remove from `team_members`
+      //  If not the leader, remove from `team_members`
       await _connection!.query(
         '''
       DELETE FROM team_members WHERE user_id = @userId AND team_id = @teamId
@@ -1440,10 +1345,8 @@ class PostgresDB {
         substitutionValues: {'userId': userId, 'teamId': teamId},
       );
 
-      print("✅ User $userId left team $teamId");
       return true;
     } catch (e) {
-      print("❌ Error leaving team for user $userId: $e");
       return false;
     }
   }
@@ -1463,7 +1366,6 @@ class PostgresDB {
 
       return result.isNotEmpty; // Returns true if user is in a team
     } catch (e) {
-      print("❌ Error checking team membership for user $userId: $e");
       return false;
     }
   }
@@ -1482,19 +1384,7 @@ class PostgresDB {
 
       return result.isNotEmpty; // Returns true if user created a team
     } catch (e) {
-      print("❌ Error checking if user $userId is a team leader: $e");
       return false;
     }
   }
-
-
-
-
-
-
-
-
-
-
-
 }

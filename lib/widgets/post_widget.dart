@@ -49,7 +49,6 @@ class _PostWidgetState extends State<PostWidget> {
     final DateTime createdTime = DateTime.parse(widget.createdAt);
     final String timeAgo = timeago.format(createdTime);
     final int totalLikes = (widget.likes ?? 0) + (isLikedState ? 1 : 0);
-    debugPrint("🖼️ PostWidget Debug - Post ID: ${widget.postId}, Image URL: ${widget.imageUrl ?? 'No Image'}");
 
 
     return Card(

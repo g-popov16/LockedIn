@@ -34,14 +34,12 @@ class _TeamPageState extends State<TeamPage> {
       final team = await db.getTeamByUserId(widget.userId);
 
       if (team == null) {
-        print("❌ No team found for user ${widget.userId}");
         setState(() {
           isLoading = false;
         });
         return;
       }
 
-      print("✅ Team Data: $team");
 
       final teamId = team["id"];
       final leaderId = team["created_by"];
@@ -56,7 +54,6 @@ class _TeamPageState extends State<TeamPage> {
         isLoading = false;
       });
     } catch (e) {
-      print("❌ Error fetching team data: $e");
       setState(() {
         isLoading = false;
       });
@@ -80,7 +77,6 @@ class _TeamPageState extends State<TeamPage> {
         );
       }
     } catch (e) {
-      print("❌ Error leaving team: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("An error occurred.")),
       );

@@ -10,15 +10,14 @@ class FirebaseService {
       String fileName = basename(imageFile.path);
       Reference ref = _storage.ref().child('post_images/$fileName');
 
-      // ✅ Explicitly set metadata (Avoids NullPointerException)
+      // Explicitly set metadata (Avoids NullPointerException)
       SettableMetadata metadata = SettableMetadata(
         contentType: 'image/jpeg', // Adjust based on file type
       );
 
-      await ref.putFile(imageFile, metadata); // ✅ Pass metadata
+      await ref.putFile(imageFile, metadata); //  Pass metadata
       return await ref.getDownloadURL(); // 🔹 Get Firebase URL
     } catch (e) {
-      print("❌ Error uploading image: $e");
       return null;
     }
   }

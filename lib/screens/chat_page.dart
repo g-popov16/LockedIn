@@ -44,14 +44,12 @@ class _ChatPageState extends State<ChatPage> {
         _scrollToBottom();
       });
     } catch (e) {
-      print("❌ Error loading chat history: $e");
     }
   }
 
   Future<void> _initChat() async {
     final userId = await db.getCurrentUserId();
     if (userId == null) {
-      print("⚠️ No logged-in user found");
       return;
     }
     _currentUserId = userId;
@@ -60,8 +58,6 @@ class _ChatPageState extends State<ChatPage> {
 
     _messageSubscription?.cancel();
     _messageSubscription = db.messageStream.listen((newMsg) {
-      print("📩 [NEW MESSAGE RECEIVED]: $newMsg");
-
       final sender = newMsg["sender_id"];
       final receiver = newMsg["receiver_id"];
       final msgId = newMsg["id"];
@@ -72,19 +68,17 @@ class _ChatPageState extends State<ChatPage> {
 
       if (!relevantChat) return;
 
+      // Check for duplicates before adding
       final alreadyExists = _messages.any((m) => m["id"] == msgId);
-      if (alreadyExists) {
-        print("🔎 Duplicate message with id $msgId. Ignoring.");
-        return;
-      }
+      if (alreadyExists) return;
 
-      // ✅ Update UI & Scroll Down
       setState(() {
         _messages.add(newMsg);
       });
 
       _scrollToBottom();
     });
+
   }
 
   void _sendMessage() async {
@@ -101,20 +95,11 @@ class _ChatPageState extends State<ChatPage> {
       _messageController.clear();
 
       // Manually add the message to the chat UI
-      setState(() {
-        _messages.add({
-          "id": DateTime.now().millisecondsSinceEpoch, // Temporary ID
-          "sender_id": _currentUserId,
-          "receiver_id": widget.otherUserId,
-          "content": text,
-          "created_at": DateTime.now()
-              .toIso8601String(), // Fake timestamp for immediate UI update
-        });
-      });
+      _messageController.clear();
+
 
       _scrollToBottom();
     } catch (e) {
-      print("❌ Error sending message: $e");
     }
   }
 
@@ -154,7 +139,7 @@ class _ChatPageState extends State<ChatPage> {
             child: Container(
               color: Colors.grey[900],
               child: ListView.builder(
-                controller: _scrollController, // ✅ Add ScrollController
+                controller: _scrollController, //  Add ScrollController
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {

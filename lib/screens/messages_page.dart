@@ -22,7 +22,6 @@ class _MessagesPageState extends State<MessagesPage> {
   Future<List<Map<String, dynamic>>> fetchConnections() async {
     final currentUserId = await db.getCurrentUserId();
     if (currentUserId == null) {
-      print("⚠️ No current user logged in.");
       return [];
     }
     return await db.getAcceptedConnections(currentUserId);

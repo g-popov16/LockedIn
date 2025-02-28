@@ -63,7 +63,6 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> handleSignUp() async {
-    print("📌 Starting sign-up process...");
 
     if (_formKey.currentState!.validate() && _selectedRole != null) {
       final hashedPassword = BCrypt.hashpw(
@@ -83,19 +82,16 @@ class _SignUpPageState extends State<SignUpPage> {
         "role": _roleMapping[_selectedRole] ?? "ROLE_USER",
       };
 
-      print("📌 Attempting to sign up user with data: $userData");
 
       try {
         bool success = await db.signUp(userData);
         if (success) {
-          print("✅ User signed up successfully!");
 
           // Retrieve newly created user ID
           final prefs = await SharedPreferences.getInstance();
           final newUserId = prefs.getInt('user_id');
 
           if (newUserId == null) {
-            print("❌ Error: User ID not found after sign-up.");
             return;
           }
 
@@ -106,7 +102,6 @@ class _SignUpPageState extends State<SignUpPage> {
 
           // ✅ If a profile image is selected, upload to Firebase Storage
           if (_profileImage != null) {
-            print("📌 Uploading profile picture for user ID: $newUserId");
 
             // Upload image to Firebase Storage and get URL
             String? profilePicUrl = await _firebaseStorage.uploadProfilePicture(
@@ -115,7 +110,6 @@ class _SignUpPageState extends State<SignUpPage> {
             );
 
             if (profilePicUrl != null) {
-              print("✅ Profile picture uploaded to Firebase: $profilePicUrl");
 
               // ✅ Update `profile_pic_url` in the database
               bool updateSuccess = await db.updateUserProfilePicture(
@@ -124,46 +118,36 @@ class _SignUpPageState extends State<SignUpPage> {
               );
 
               if (updateSuccess) {
-                print("✅ User profile picture URL updated in database.");
               } else {
-                print("❌ Failed to update profile picture URL in database.");
               }
             } else {
-              print("❌ Failed to upload profile picture to Firebase.");
             }
           } else {
-            print("⚠ No profile picture to upload.");
           }
 
           // ✅ Save user session
           await db.saveUserEmail(userEmail);
-          print("✅ User email saved locally.");
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Account created successfully!")),
           );
 
           // ✅ Navigate to HomePage
-          print("📌 Navigating to HomePage...");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => HomePage(userEmail: userEmail)),
           );
         } else {
-          print("❌ Sign-up failed, check database logs.");
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Sign-up failed. Please try again.")),
           );
         }
       } catch (e, stacktrace) {
-        print("❌ Error during sign-up: $e");
-        print("🛑 Stacktrace:\n$stacktrace");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("An error occurred. Please try again.")),
         );
       }
     } else {
-      print("⚠ Sign-up form validation failed or role is null.");
     }
   }
 
@@ -374,12 +358,9 @@ class _SignUpPageState extends State<SignUpPage> {
       });
 
       if (success) {
-        print("✅ Team '$teamName' created successfully.");
       } else {
-        print("❌ Error creating team.");
       }
     } catch (e) {
-      print("❌ Error saving team to database: $e");
     }
   }
 

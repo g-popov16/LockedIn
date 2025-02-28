@@ -58,7 +58,6 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      print("Error fetching user role: $e");
     } finally {
       setState(() {
         isLoading = false;
@@ -73,22 +72,18 @@ class _HomePageState extends State<HomePage> {
         currentUserId = id;
       });
     } catch (e) {
-      print("Error fetching current user ID: $e");
     }
   }
 
   Future<void> _fetchPosts() async {
-    print("🟢 Entering _fetchPosts()... currentUserId = $currentUserId");
 
     if (currentUserId == null) {
-      print("❌ currentUserId is null, skipping _fetchPosts.");
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      print("🔍 About to call getPostsPaginated() with currentUserId=$currentUserId");
 
       final fetchedPosts = await db.getPostsPaginated(
         limit: 10,
@@ -96,10 +91,8 @@ class _HomePageState extends State<HomePage> {
         currentUserId: currentUserId!,
       );
 
-      print("🔍 Raw Fetched Posts: $fetchedPosts");
 
       fetchedPosts.forEach((post) {
-        print("📝 Before Processing: Post ID: ${post['id']}, Image URL: ${post['image_url']}");
       });
 
       setState(() {
@@ -112,14 +105,10 @@ class _HomePageState extends State<HomePage> {
         }).toList();
       });
 
-      print("📸 Processed Post Data: $posts");
 
     } catch (e, stack) {
-      print("❌ Error fetching posts: $e");
-      print("🛑 Stack trace:\n$stack");
     } finally {
       setState(() => isLoading = false);
-      print("🟢 Leaving _fetchPosts(), isLoading = false.");
     }
   }
 
@@ -138,7 +127,6 @@ class _HomePageState extends State<HomePage> {
       itemBuilder: (context, index) {
         final post = posts[index];
         // IMPORTANT: Return the PostWidget, not just call it
-        print("🚀 Sending Post ID: ${post['id']}, Image URL: ${post['image_url']}");
         return PostWidget(
 
           postId: post['id'] ?? 0,
@@ -161,7 +149,6 @@ class _HomePageState extends State<HomePage> {
                 post['is_liked'] = !post['is_liked'];  // Toggle the like state
               });
             } catch (e) {
-              print("Error liking/unliking post: $e");
             }
           },
 

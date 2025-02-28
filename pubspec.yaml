@@ -46,9 +46,17 @@ dependencies:
   cached_network_image: ^3.4.1
   path_provider: ^2.1.5
   flutter_cache_manager: ^3.4.1
+  flutter_launcher_icons: ^0.13.1
 
 
 
+flutter_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/app_icon.png"
+  adaptive_icon_foreground: null
+  adaptive_icon_background: null
 
 dev_dependencies:
   flutter_test:

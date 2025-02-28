@@ -60,7 +60,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       case "ROLE_TEAM":
         return "Team";
       default:
-        print("❌ Unknown Role received: $role"); // Debugging
+        // Debugging
         return "Unknown Role";
     }
   }
@@ -79,13 +79,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
         throw Exception("User not found in database.");
       }
 
-      print("🔍 Full user data from DB: $user"); // Debugging
+      // Debugging
 
       // 2️⃣ Extract Role (Fix: Ensure it's accessed correctly)
       final String? fetchedRole = user["roles"] ?? user["role"]; // Ensure correct key
       final String? fetchedProfileUrl = user["profile_pic_url"];
 
-      print("🔍 Role from DB: $fetchedRole"); // Debugging
+      // Debugging
 
       bool teamExists = await db.isUserInTeam(widget.userId);
       bool isTeamCreator = await db.isUserTeamCreator(widget.userId);
@@ -102,9 +102,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
         isLoading = false;
       });
 
-      print("✅ Processed Role: $role"); // Debugging
+      // Debugging
     } catch (e) {
-      print("❌ Error fetching user data: $e");
       setState(() {
         isLoading = false;
       });
@@ -119,15 +118,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
         showRequests = requests.isNotEmpty;
       });
     } catch (e) {
-      print("Error fetching connection requests: $e");
     }
   }
 
   Future<void> _sendConnectionRequest() async {
     try {
       final int? currentUserId = await db.getCurrentUserId();
-      print(
-          "Current User ID: $currentUserId, Target User ID: ${widget.userId}"); // Debugging Line
+      // Debugging Line
 
       if (currentUserId == null || currentUserId == widget.userId) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,7 +147,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         const SnackBar(content: Text("Connection request sent!")),
       );
     } catch (e) {
-      print("Error sending connection request: $e");
     }
   }
 
@@ -170,7 +166,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         const SnackBar(content: Text("Connection request canceled.")),
       );
     } catch (e) {
-      print("Error canceling connection request: $e");
     }
   }
 
@@ -190,7 +185,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         const SnackBar(content: Text("Connection removed.")),
       );
     } catch (e) {
-      print("Error removing connection: $e");
     }
   }
 
@@ -277,7 +271,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       }
       await _fetchConnectionRequests();
     } catch (e) {
-      print("Error handling connection request: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to process the request.")),
       );
@@ -298,7 +291,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         context: context,
         isScrollControlled: true,
         builder: (BuildContext context) {
-          print("🐞 userProfileImage is null? ${profileImageUrl == null}");
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -315,7 +307,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     subtitle: Text(applicant["email"]),
                     trailing: ElevatedButton(
                       onPressed: () {
-                        print("Viewing resume: ${applicant['resume_link']}");
                       },
                       child: const Text("View Resume"),
                     ),
@@ -327,7 +318,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         },
       );
     } catch (e) {
-      print("Error viewing applicants: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to load applicants.")),
       );
@@ -337,7 +327,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   @override
   Widget build(BuildContext context) {
-    print("🐞 Checking role before rendering UI: $role");
 
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E1E), // Dark background
@@ -494,7 +483,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       children: [
                         ElevatedButton(
                           onPressed: () {
-                            print("🔍 Navigating to Team Page - Role: $role");
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -619,9 +607,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         (route) => false,
       );
 
-      print("✅ User logged out successfully!");
     } catch (e) {
-      print("❌ Error logging out: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to log out.")),
       );
@@ -636,7 +622,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         jobs = data["jobs"];
       });
     } catch (e) {
-      print("Error fetching posts and jobs: $e");
     }
   }
 
