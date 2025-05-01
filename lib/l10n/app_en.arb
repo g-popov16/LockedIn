@@ -1,0 +1,470 @@
+{
+  "@@locale": "en",
+
+  "appName": "LockedIn",
+  "@appName": { "description": "The name of the application, potentially used on splash or generic screens" },
+
+  "splashScreenAppName": "LockedIn",
+  "@splashScreenAppName": { "description": "Text shown during splash screen animation (consider if animation needs adapting based on text length)" },
+
+  "loading": "Loading...",
+  "@loading": { "description": "Generic loading text indicator" },
+
+  "signInTitle": "Sign In",
+  "@signInTitle": { "description": "Title of the Sign In page AppBar" },
+  "signInErrorNotFound": "No account found with that email.",
+  "@signInErrorNotFound": { "description": "Error message when email doesn't exist in DB during sign in" },
+  "signInErrorInvalidPassword": "Invalid password. Please try again.",
+  "@signInErrorInvalidPassword": { "description": "Error message for incorrect password during sign in" },
+  "signInErrorGeneral": "Error during sign-in: {error}",
+  "@signInErrorGeneral": {
+    "description": "Generic error message shown during sign in",
+    "placeholders": {
+      "error": {
+        "type": "Object",
+        "example": "Network issue"
+      }
+    }
+  },
+  "welcomeBack": "Welcome Back!",
+  "@welcomeBack": { "description": "Greeting on the Sign In page" },
+  "emailLabel": "Email Address",
+  "@emailLabel": { "description": "Label for the email input field" },
+  "emailRequiredError": "Please enter your email",
+  "@emailRequiredError": { "description": "Validation error if email is empty" },
+  "emailInvalidError": "Please enter a valid email",
+  "@emailInvalidError": { "description": "Validation error if email format is wrong" },
+  "passwordLabel": "Password",
+  "@passwordLabel": { "description": "Label for the password input field" },
+  "passwordRequiredError": "Please enter your password",
+  "@passwordRequiredError": { "description": "Validation error if password is empty" },
+  "signInButtonText": "Sign In",
+  "@signInButtonText": { "description": "Text on the main sign in button" },
+  "createAccountLink": "Don't have an account? Create one",
+  "@createAccountLink": { "description": "Text button to navigate to sign up page" },
+
+  "signUpTitle": "Create Account",
+  "@signUpTitle": { "description": "Title for the Sign Up page AppBar" },
+  "roleUser": "User",
+  "@roleUser": { "description": "Display name for the User role" },
+  "roleTeam": "Team",
+  "@roleTeam": { "description": "Display name for the Team role" },
+  "roleSponsor": "Sponsor",
+  "@roleSponsor": { "description": "Display name for the Sponsor role" },
+  "signUpSuccess": "Account created successfully!",
+  "@signUpSuccess": { "description": "Snackbar message on successful sign up" },
+  "signUpFailedError": "Sign-up failed. Please try again.",
+  "@signUpFailedError": { "description": "Snackbar message on sign up failure (e.g., email exists)" },
+  "signUpGeneralError": "An error occurred. Please try again.",
+  "@signUpGeneralError": { "description": "Generic error message during sign up" },
+  "profilePicturePrompt": "Add a profile picture",
+  "@profilePicturePrompt": { "description": "Prompt text or icon alt text for adding profile picture during signup" },
+  "usernameLabel": "Username",
+  "@usernameLabel": { "description": "Label for the username input field" },
+  "usernameRequiredError": "Please enter your username",
+  "@usernameRequiredError": { "description": "Validation error if username is empty" },
+  "passwordLengthError": "Password must be at least 6 characters long",
+  "@passwordLengthError": { "description": "Validation error if password is too short" },
+  "fullNameLabel": "Full Name",
+  "@fullNameLabel": { "description": "Label for the full name input field" },
+  "fullNameRequiredError": "Please enter your name",
+  "@fullNameRequiredError": { "description": "Validation error if full name is empty" },
+  "bioLabel": "Bio",
+  "@bioLabel": { "description": "Label for the user biography input field" },
+  "selectRoleLabel": "Select Role",
+  "@selectRoleLabel": { "description": "Label for the role selection dropdown" },
+  "roleRequiredError": "Please select a role",
+  "@roleRequiredError": { "description": "Validation error if no role is selected" },
+  "signUpButtonText": "Sign Up",
+  "@signUpButtonText": { "description": "Text on the main sign up button" },
+  "enterTeamNameTitle": "Enter Team Name",
+  "@enterTeamNameTitle": { "description": "Title for the dialog asking for team name after signup" },
+  "teamNameHint": "Team Name",
+  "@teamNameHint": { "description": "Hint text for the team name input field" },
+  "cancelButton": "Cancel",
+  "@cancelButton": { "description": "Generic cancel button text" },
+  "saveButton": "Save",
+  "@saveButton": { "description": "Generic save button text" },
+
+  "navHome": "Home",
+  "@navHome": { "description": "Label for the Home tab in bottom navigation" },
+  "navJobs": "Jobs",
+  "@navJobs": { "description": "Label for the Jobs tab in bottom navigation" },
+  "navMessages": "Messages",
+  "@navMessages": { "description": "Label for the Messages tab in bottom navigation" },
+  "navProfile": "Profile",
+  "@navProfile": { "description": "Label for the Profile tab in bottom navigation" },
+  "errorUnableToRetrieveUserInfo": "Error: Unable to retrieve user information",
+  "@errorUnableToRetrieveUserInfo": { "description": "Error message when user ID or details can't be fetched" },
+  "noPostsAvailable": "No posts available.",
+  "@noPostsAvailable": { "description": "Message shown on home feed when there are no posts" },
+
+  "postLikesCount": "{count, plural, =0{0 Likes} =1{1 Like} other{{count} Likes}}",
+  "@postLikesCount": {
+    "description": "Displays the number of likes on a post.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "compact"
+      }
+    }
+  },
+  "postViewComments": " Comments",
+  "@postViewComments": { "description": "Link text to open comments, usually preceded by icon/count" },
+
+  "viewTeamLink": "View Team",
+  "@viewTeamLink": { "description": "Link text on a job post to view the posting team's profile" },
+  "viewSponsorLink": "View Sponsor",
+  "@viewSponsorLink": { "description": "Link text on a job post to view the posting sponsor's profile" },
+  "viewPosterLink": "View Poster",
+  "@viewPosterLink": { "description": "Generic link text on a job post to view the poster's profile" },
+  "jobCompanyLabel": "Company: {companyName}",
+  "@jobCompanyLabel": {
+    "description": "Label showing the company name on a job widget",
+    "placeholders": {
+      "companyName": {
+        "type": "String",
+        "example": "Innovate Inc."
+      }
+    }
+  },
+  "applyButton": "Apply",
+  "@applyButton": { "description": "Button text for applying to a job" },
+  "viewApplicantsButton": "View Applicants",
+  "@viewApplicantsButton": { "description": "Button text for job poster to view applicants" },
+  "editButton": "Edit",
+  "@editButton": { "description": "Generic edit button text" },
+
+  "commentsLoadFailedError": "Failed to load comments.",
+  "@commentsLoadFailedError": { "description": "Error message when comments fail to load" },
+  "commentAddFailedError": "Failed to add comment.",
+  "@commentAddFailedError": { "description": "Error message when adding a comment fails" },
+  "commentsTitle": "Comments",
+  "@commentsTitle": { "description": "Title of the comments section/dialog" },
+  "commentsNone": "No comments yet. Be the first to comment!",
+  "@commentsNone": { "description": "Message shown when a post has no comments" },
+  "commentByPrefix": "by ",
+  "@commentByPrefix": { "description": "Prefix before username in comment subtitle (e.g., 'by John Doe')" },
+  "commentInputHint": "Write a comment...",
+  "@commentInputHint": { "description": "Hint text in the comment input field" },
+
+  "createPostTitle": "Create Post",
+  "@createPostTitle": { "description": "Title of the Create Post page AppBar" },
+  "createPostHint": "What's on your mind?",
+  "@createPostHint": { "description": "Hint text for the post content input field" },
+  "createPostNoImageSelected": "No image selected",
+  "@createPostNoImageSelected": { "description": "Text shown when no image is selected for a post" },
+  "createPostPickImageButton": "Pick Image",
+  "@createPostPickImageButton": { "description": "Button text to select an image for a post" },
+  "createPostSubmitButton": "Post",
+  "@createPostSubmitButton": { "description": "Button text to submit/create a new post" },
+
+  "editJobFieldsRequiredError": "All fields must be filled!",
+  "@editJobFieldsRequiredError": { "description": "Error message when trying to save job edits with empty fields" },
+  "editJobUpdateSuccess": "Job updated successfully!",
+  "@editJobUpdateSuccess": { "description": "Success message after updating a job" },
+  "editJobUpdateFailedError": "Failed to update the job.",
+  "@editJobUpdateFailedError": { "description": "Error message when updating a job fails" },
+  "editJobDeleteSuccess": "Job deleted successfully!",
+  "@editJobDeleteSuccess": { "description": "Success message after deleting a job" },
+  "editJobDeleteFailedError": "Failed to delete the job.",
+  "@editJobDeleteFailedError": { "description": "Error message when deleting a job fails" },
+  "editJobTitle": "Edit Job",
+  "@editJobTitle": { "description": "Title of the Edit Job page AppBar" },
+  "jobTitleLabel": "Job Title",
+  "@jobTitleLabel": { "description": "Label for the job title input field" },
+  "jobTitleHint": "Enter job title",
+  "@jobTitleHint": { "description": "Hint text for the job title input field" },
+  "companyNameLabel": "Company Name",
+  "@companyNameLabel": { "description": "Label for the company name input field" },
+  "companyNameHint": "Enter company name",
+  "@companyNameHint": { "description": "Hint text for the company name input field" },
+  "jobDescriptionLabel": "Job Description",
+  "@jobDescriptionLabel": { "description": "Label for the job description input field" },
+  "jobDescriptionHint": "Enter job description",
+  "@jobDescriptionHint": { "description": "Hint text for the job description input field" },
+  "deleteJobButton": "Delete Job",
+  "@deleteJobButton": { "description": "Button text to delete a job posting" },
+  "saveChangesButton": "Save Changes",
+  "@saveChangesButton": { "description": "Button text to save edits" },
+
+  "addJobOfferTitle": "Add Job Offer",
+  "@addJobOfferTitle": { "description": "Title for the dialog to add a new job offer" },
+  "addJobButton": "Add Job",
+  "@addJobButton": { "description": "Button text in the dialog to confirm adding a job" },
+  "addJobFieldsRequiredError": "Please fill in all fields",
+  "@addJobFieldsRequiredError": { "description": "Error in add job dialog if fields are empty" },
+  "addJobSuccess": "Job offer added successfully!",
+  "@addJobSuccess": { "description": "Success message after adding a new job offer" },
+  "addJobError": "Error adding job offer",
+  "@addJobError": { "description": "Error message when adding a job offer fails" },
+  "jobApplicantsTitle": "Job Applicants",
+  "@jobApplicantsTitle": { "description": "Title for the dialog showing job applicants" },
+  "jobApplicantsNone": "No applicants yet.",
+  "@jobApplicantsNone": { "description": "Message shown when a job has no applicants" },
+  "jobApplicantEmailLabel": "Email: {email}",
+  "@jobApplicantEmailLabel": {
+    "description": "Label showing an applicant's email",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "applicant@example.com"
+      }
+    }
+  },
+  "jobApplicantResumeLabel": "Resume: {resumeLink}",
+  "@jobApplicantResumeLabel": {
+    "description": "Label showing an applicant's resume link",
+    "placeholders": {
+      "resumeLink": {
+        "type": "String",
+        "example": "https://linkedin.com/in/applicant"
+      }
+    }
+  },
+  "jobApplicantResumeOpenError": "Could not open the CV link.\nThe link has been copied to your clipboard.",
+  "@jobApplicantResumeOpenError": { "description": "Error message shown if resume link cannot be opened, informing user it was copied" },
+  "openBrowserAction": "Open Browser",
+  "@openBrowserAction": { "description": "Label for Snackbar action to attempt opening link in browser" },
+  "acceptButton": "Accept",
+  "@acceptButton": { "description": "Generic accept button text" },
+  "rejectButton": "Reject",
+  "@rejectButton": { "description": "Generic reject button text" },
+  "applicationRejectedSuccess": "Application rejected!",
+  "@applicationRejectedSuccess": { "description": "Success message after rejecting a job application" },
+  "closeButton": "Close",
+  "@closeButton": { "description": "Generic close button text, often used in dialogs" },
+  "jobApplicantsFetchError": "Error fetching applicants.",
+  "@jobApplicantsFetchError": { "description": "Error message when fetching applicants for a job fails" },
+  "errorFetchJobPosterRole": "Error: Unable to fetch job poster role.",
+  "@errorFetchJobPosterRole": { "description": "Error message if the role of the job poster cannot be determined" },
+  "applyJobAlreadyInTeamError": "Oops! You are already in a team.",
+  "@applyJobAlreadyInTeamError": { "description": "Error shown when a user tries to apply for a team job while already in a team" },
+  "applyJobTitle": "Apply for Job",
+  "@applyJobTitle": { "description": "Title for the dialog where user applies for a job" },
+  "cvLinkLabel": "CV Link",
+  "@cvLinkLabel": { "description": "Label for the CV/Resume link input field" },
+  "cvLinkHint": "https://yourcv.com",
+  "@cvLinkHint": { "description": "Hint text for the CV/Resume link input field" },
+  "submitButton": "Submit",
+  "@submitButton": { "description": "Generic submit button text" },
+  "applicationSubmitSuccess": "Application submitted successfully!",
+  "@applicationSubmitSuccess": { "description": "Success message after submitting a job application" },
+  "cvLinkRequiredError": "Please provide a valid CV link.",
+  "@cvLinkRequiredError": { "description": "Error shown if user tries to submit application without a CV link" },
+  "applicantAcceptedTeam": "Applicant accepted and added to team!",
+  "@applicantAcceptedTeam": { "description": "Success message after accepting an applicant for a team role" },
+  "applicantAcceptedSponsor": "Applicant accepted and added to sponsorship!",
+  "@applicantAcceptedSponsor": { "description": "Success message after accepting an applicant for a sponsor role (if applicable)" },
+  "errorAddingUserToTeam": "Error adding user to team.",
+  "@errorAddingUserToTeam": { "description": "Error message if adding the accepted applicant to the team fails" },
+  "errorAcceptingApplicant": "Error accepting applicant.",
+  "@errorAcceptingApplicant": { "description": "Generic error message when the process of accepting an applicant fails" },
+
+  "teamLeaveSuccess": "You have left the team.",
+  "@teamLeaveSuccess": { "description": "Success message when a user successfully leaves a team" },
+  "teamLeaveError": "Error leaving the team.",
+  "@teamLeaveError": { "description": "Error message if leaving the team fails" },
+  "teamLeaveGeneralError": "An error occurred.",
+  "@teamLeaveGeneralError": { "description": "Generic error while trying to leave a team" },
+  "teamPageTitle": "Team",
+  "@teamPageTitle": { "description": "App Bar title for the Team Page" },
+  "teamNotInTeam": "You are not part of any team.",
+  "@teamNotInTeam": { "description": "Message shown on team page if the user isn't in a team" },
+  "teamPageNameLabel": "Team: {teamName}",
+  "@teamPageNameLabel": {
+    "description": "Label showing the team name on the Team Page",
+    "placeholders": {
+      "teamName": {
+        "type": "String",
+        "example": "The A Team"
+      }
+    }
+  },
+  "teamPageLeaderLabel": "Leader: {leaderName}",
+  "@teamPageLeaderLabel": {
+    "description": "Label showing the team leader's name on the Team Page",
+    "placeholders": {
+      "leaderName": {
+        "type": "String",
+        "example": "John Smith"
+      }
+    }
+  },
+  "teamMembersSectionTitle": "Team Members",
+  "@teamMembersSectionTitle": { "description": "Title for the list of team members" },
+  "teamMembersNone": "No members yet.",
+  "@teamMembersNone": { "description": "Message shown if a team has no members (besides the leader)" },
+  "leaveTeamButtonTooltip": "Leave Team",
+  "@leaveTeamButtonTooltip": { "description": "Tooltip for the button allowing a member to leave the team" },
+
+  "roleAdmin": "Admin",
+  "@roleAdmin": { "description": "Display name for the Admin role" },
+  "roleUnknown": "Unknown Role",
+  "@roleUnknown": { "description": "Display text for an unrecognized role" },
+  "userBioNone": "No bio available.",
+  "@userBioNone": { "description": "Text shown on user profile if bio is empty" },
+  "defaultProfileImageAlt": "Default profile image",
+  "@defaultProfileImageAlt": { "description": "Alt text or fallback description for profile picture" },
+  "connectErrorSelf": "You cannot send a request to yourself!",
+  "@connectErrorSelf": { "description": "Error when user tries to connect with themselves" },
+  "connectRequestSentSuccess": "Connection request sent!",
+  "@connectRequestSentSuccess": { "description": "Success message after sending a connection request" },
+  "connectRequestCanceledSuccess": "Connection request canceled.",
+  "@connectRequestCanceledSuccess": { "description": "Success message after canceling a sent connection request" },
+  "connectionRemovedSuccess": "Connection removed.",
+  "@connectionRemovedSuccess": { "description": "Success message after removing an existing connection" },
+  "removeConnectionButton": "Remove Connection",
+  "@removeConnectionButton": { "description": "Button text to remove an existing connection" },
+  "cancelRequestButton": "Cancel Request",
+  "@cancelRequestButton": { "description": "Button text to cancel a pending outgoing connection request" },
+  "connectButton": "Connect",
+  "@connectButton": { "description": "Button text to send a connection request" },
+  "postsSectionTitle": "Posts",
+  "@postsSectionTitle": { "description": "Title for the Posts section on user profile" },
+  "jobsSectionTitle": "Jobs",
+  "@jobsSectionTitle": { "description": "Title for the Jobs section on user profile" },
+  "connectionRequestsSectionTitle": "Connection Requests",
+  "@connectionRequestsSectionTitle": { "description": "Title for the Connection Requests section on user profile" },
+  "connectRequestAcceptedSuccess": "Connection request accepted!",
+  "@connectRequestAcceptedSuccess": { "description": "Success message after accepting an incoming connection request" },
+  "connectRequestDeclinedSuccess": "Connection request declined.",
+  "@connectRequestDeclinedSuccess": { "description": "Success message after declining an incoming connection request" },
+  "connectRequestProcessError": "Failed to process the request.",
+  "@connectRequestProcessError": { "description": "Error message when accepting/declining connection request fails" },
+  "applicantsTitle": "Applicants",
+  "@applicantsTitle": { "description": "Title for the list/dialog showing job applicants" },
+  "viewResumeButton": "View Resume",
+  "@viewResumeButton": { "description": "Button text to view an applicant's resume" },
+  "logOutButton": "Log Out",
+  "@logOutButton": { "description": "Button text for logging out" },
+  "userProfileRoleLabel": "Role: {role}",
+  "@userProfileRoleLabel": {
+    "description": "Label showing the user's role on their profile",
+    "placeholders": {
+      "role": {
+        "type": "String",
+        "example": "User"
+      }
+    }
+  },
+  "connectionRequestsNone": "No connection requests.",
+  "@connectionRequestsNone": { "description": "Message shown when there are no pending incoming connection requests" },
+  "connectionRequestIncomingSubtitle": "Wants to connect",
+  "@connectionRequestIncomingSubtitle": { "description": "Subtitle text for an incoming connection request" },
+  "acceptRequestTooltip": "Accept Request",
+  "@acceptRequestTooltip": { "description": "Tooltip for the accept connection request button" },
+  "declineRequestTooltip": "Decline Request",
+  "@declineRequestTooltip": { "description": "Tooltip for the decline connection request button" },
+  "viewTeamButton": "View Team",
+  "@viewTeamButton": { "description": "Button text on user profile to navigate to their team page" },
+  "postsNone": "No posts to display.",
+  "@postsNone": { "description": "Message shown in posts section of profile if user has no posts" },
+  "jobsNone": "No jobs to display.",
+  "@jobsNone": { "description": "Message shown in jobs section of profile if user has no jobs posted/applied" },
+  "jobApplyErrorSelf": "You cannot apply to your own job!",
+  "@jobApplyErrorSelf": { "description": "Error message when user tries to apply to their own job posting" },
+  "addJobFabTooltip": "Add a new job offer",
+    "@addJobFabTooltip": {
+      "description": "Tooltip for the Floating Action Button used to open the add job dialog"
+    },
+     "chatPageTitle": "Chat with {username}",
+      "@chatPageTitle": {
+          "description": "AppBar title for the chat page, showing the other user's name",
+          "placeholders": {
+              "username": { "type": "String" }
+          }
+      },
+      "chatInputHint": "Type a message...",
+      "@chatInputHint": {
+          "description": "Hint text displayed in the chat message input field"
+      },
+
+      "chatErrorInit": "Could not initialize chat. Please try again.",
+       "@chatErrorInit": {
+          "description": "Error message shown if fetching current user ID fails during chat initialization"
+      },
+      "chatErrorSend": "Failed to send message.",
+      "@chatErrorSend": {
+          "description": "Error message shown in a SnackBar if sending a message fails"
+      },
+  "logOutFailedError": "Failed to log out.",
+  "@logOutFailedError": { "description": "Error message if the logout process fails" },
+  "errorFetchingUserInfo": "Error fetching user information",
+  "@errorFetchingUserInfo": { "description": "Error message displayed when user details (like ID, role) fail to load" },
+
+  "errorFetchingPosts": "Error fetching posts",
+  "@errorFetchingPosts": { "description": "Error message displayed when the list of posts fails to load" },
+
+  "errorLikingPost": "Error updating like status",
+  "@errorLikingPost": { "description": "Error message displayed when liking or unliking a post fails" },
+
+
+  "errorLoadingPosts": "Error loading posts.",
+  "@errorLoadingPosts": {
+    "description": "Error message shown when posts fail to load in the feed."
+  },
+
+  "addStoryTooltip": "Add Story",
+  "@addStoryTooltip": {
+    "description": "Tooltip text for the button to add a new story."
+  },
+
+  "uploadingStory": "Uploading story...",
+  "@uploadingStory": {
+    "description": "Message shown while a story is being uploaded."
+  },
+
+  "actions": "Actions",
+  "@actions": { "description": "Tooltip for menu buttons showing more actions" },
+  "alreadyAppliedError": "You have already applied for this job.",
+  "@alreadyAppliedError": { "description": "Error shown when user tries to apply to a job they already applied for" },
+
+  "cannotApplyError": "Cannot apply for this job at this time.",
+  "@cannotApplyError": { "description": "Generic error shown when pre-application checks fail for an unspecified reason" },
+
+  "storyAddedSuccess": "Story added!",
+  "@storyAddedSuccess": {
+    "description": "Success message shown after a story is successfully added."
+  },
+
+  "storyAddedError": "Failed to add story.",
+  "@storyAddedError": {
+    "description": "Error message shown if adding the story to the database failed after upload."
+  },
+
+  "uploadFailedError": "Upload failed.",
+  "@uploadFailedError": {
+    "description": "Error message shown if the story media upload to storage failed."
+  },
+
+  "jobResumeOpenError": "Could not open resume link.",
+
+
+
+
+  "messagesPageTitle": "Messages",
+    "@messagesPageTitle": {
+        "description": "Title for the Messages page AppBar"
+    },
+
+    "errorPrefix": "Error: ",
+     "@errorPrefix": {
+        "description": "Prefix shown before an error message"
+     },
+
+          "messagesNoConnections": "No connections found.",
+          "@messagesNoConnections": {
+            "description": "Message displayed on the Messages page when the user has no accepted connections to chat with"
+          },
+
+          "messagesTapToChat": "Tap to chat",
+          "@messagesTapToChat": {
+            "description": "Subtitle text on a connection item in the messages list, prompting the user to tap"
+          },
+
+          "unknownUser": "Unknown User",
+          "@unknownUser": {
+            "description": "Default text displayed when a username cannot be found or is missing"
+          }
+}

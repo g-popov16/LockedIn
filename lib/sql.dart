@@ -401,6 +401,7 @@ class PostgresDB {
   // Get current user ID
 
   // Paginated posts retrieval
+  // Paginated posts retrieval
   Future<List<Map<String, dynamic>>> getPostsPaginated({
     required int limit,
     required int offset,
@@ -408,32 +409,40 @@ class PostgresDB {
   }) async {
     await ensureConnection();
 
+    // --- MODIFIED QUERY ---
     final results = await _connection!.query('''
-  SELECT 
-    p.id,
-    p.user_id,
-    p.content,
-    p.created_at::TEXT,
-    u.username,
-    p.image_url,  -- 🔍 This field might not be returning valid data!
-    -- Check if this user has liked the post
-    CASE 
-      WHEN EXISTS (
-        SELECT 1 FROM post_likes pl 
-        WHERE pl.post_id = p.id 
-        AND pl.user_id = @currentUserId
-      ) THEN TRUE ELSE FALSE
-    END AS is_liked
-  FROM posts p
-  JOIN users u ON p.user_id = u.id
-  ORDER BY p.created_at DESC
-  LIMIT @limit OFFSET @offset
-  ''', substitutionValues: {
+      SELECT
+        p.id,                   -- 0
+        p.user_id,              -- 1
+        p.content,              -- 2
+        p.created_at::TEXT,     -- 3
+        u.username,             -- 4
+        u.profile_pic_url,      -- 5 (Added user's profile pic)
+        p.image_url,            -- 6 (Post image url)
+        -- Calculate total likes for the post
+        (
+          SELECT COUNT(*)
+          FROM post_likes pl_count
+          WHERE pl_count.post_id = p.id
+        ) AS likes_count,        -- 7 (Added total like count)
+        -- Check if the current user has liked this specific post
+        EXISTS (
+          SELECT 1
+          FROM post_likes pl_check
+          WHERE pl_check.post_id = p.id AND pl_check.user_id = @currentUserId
+        ) AS is_liked            -- 8 (Kept is_liked check)
+      FROM posts p
+      JOIN users u ON p.user_id = u.id -- Join users table to get username and profile pic
+      ORDER BY p.created_at DESC
+      LIMIT @limit OFFSET @offset
+    ''', substitutionValues: {
       'limit': limit,
       'offset': offset,
-      'currentUserId': currentUserId,
+      'currentUserId': currentUserId, // Used for the is_liked check
     });
+    // --- END MODIFIED QUERY ---
 
+    // --- UPDATED MAPPING ---
     return results.map((row) {
       return {
         "id": row[0] as int? ?? 0,
@@ -441,10 +450,13 @@ class PostgresDB {
         "content": row[2] as String? ?? "",
         "created_at": row[3] as String? ?? "",
         "username": row[4] as String? ?? "Unknown",
-        "image_url": row[5] as String? ?? "",
-        "is_liked": row[6] as bool? ?? false,
+        "profile_image_url": row[5] as String?, // Map the added profile pic URL (can be null)
+        "image_url": row[6] as String?,       // Map the post image URL (can be null)
+        "likes_count": row[7] as int? ?? 0,   // Map the calculated total likes count
+        "is_liked": row[8] as bool? ?? false, // Map the calculated is_liked status
       };
     }).toList();
+    // --- END UPDATED MAPPING ---
   }
 
 
@@ -709,65 +721,73 @@ class PostgresDB {
 
 
 
-  Future<Map<String, dynamic>> getUserPostsAndJobs(int userId) async {
-    await ensureConnection(); // Ensure the database connection is open
+  Future<Map<String, dynamic>> getUserPostsAndJobs(int userId, int currentUserId) async {
+    await ensureConnection();
 
     try {
-      // Fetch posts
+      // --- Fetch posts --- (Modified Query)
       final postResults = await _connection!.query('''
         SELECT 
           p.id AS post_id, 
           p.content AS post_content, 
           p.created_at::TEXT AS post_created_at,
           u.username AS username,
-          u.id AS user_id
+          p.user_id AS post_author_id, -- Select the actual author ID from posts table
+          p.image_url AS post_image_url, -- Fetch post image
+          u.profile_pic_url AS author_profile_pic_url, -- Fetch author's profile pic
+          (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count, -- Calculate likes
+          EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = @currentUserId) AS is_liked -- Check if current user liked
         FROM posts p
         JOIN users u ON p.user_id = u.id
-        WHERE u.id = @userId
+        WHERE p.user_id = @profileUserId -- Filter by the profile user ID
         ORDER BY p.created_at DESC
       ''', substitutionValues: {
-        'userId': userId,
+        'profileUserId': userId, // The ID of the profile being viewed
+        'currentUserId': currentUserId // The ID of the logged-in user viewing the profile
       });
 
+      // --- Mapping for Posts --- (Updated Map)
       final posts = postResults.map((row) {
         return {
-          "id": row[0],
-          "content": row[1],
-          "created_at": row[2],
-          "username": row[4],
-          "user_id": row[5],
+          "id": row[0] as int? ?? 0,
+          "content": row[1] as String? ?? '',
+          "created_at": row[2] as String? ?? '',
+          "username": row[3] as String? ?? 'Unknown',
+          "user_id": row[4] as int? ?? 0, // post_author_id
+          "image_url": row[5] as String?, // post_image_url (can be null)
+          "profile_image_url": row[6] as String?, // author_profile_pic_url (can be null)
+          "likes_count": row[7] as int? ?? 0, // likes_count
+          "is_liked": row[8] as bool? ?? false, // is_liked
         };
       }).toList();
 
-      // Fetch jobs
+      // --- Fetch jobs --- (Query remains the same)
       final jobResults = await _connection!.query('''
         SELECT 
-          j.id AS job_id, 
-          j.title, 
-          j.description, 
-          j.company, 
-          j.created_at::TEXT AS job_created_at, 
-          j.posted_by AS user_id
+          j.id AS job_id, j.title, j.description, j.company, 
+          j.created_at::TEXT AS job_created_at, j.posted_by AS user_id
         FROM jobs j
         WHERE j.posted_by = @userId
         ORDER BY j.created_at DESC
       ''', substitutionValues: {
-        'userId': userId,
+        'userId': userId, // Use the profile user ID here
       });
 
+      // --- Mapping for Jobs --- (Remains the same)
       final jobs = jobResults.map((row) {
         return {
-          "id": row[0],
-          "title": row[1],
-          "description": row[2],
-          "company": row[3],
-          "created_at": row[4],
-          "user_id": row[5],
+          "id": row[0] as int? ?? 0,
+          "title": row[1] as String? ?? '',
+          "description": row[2] as String? ?? '',
+          "company": row[3] as String? ?? '',
+          "created_at": row[4] as String? ?? '',
+          "user_id": row[5] as int? ?? 0,
         };
       }).toList();
 
       return {"posts": posts, "jobs": jobs};
     } catch (e) {
+      print("Error in getUserPostsAndJobs: $e");
       return {"posts": [], "jobs": []};
     }
   }
@@ -1387,4 +1407,112 @@ class PostgresDB {
       return false;
     }
   }
+  // Add these functions inside your PostgresDB class
+
+  /// Fetches a summary of users who posted stories in the last 24 hours.
+  /// Returns a list of maps, each containing 'user_id', 'username', 'profile_pic_url'.
+  Future<List<Map<String, dynamic>>> getRecentStoriesSummary() async {
+    await ensureConnection();
+    try {
+      // Fetch distinct users who have stories within the last 24 hours,
+      // along with their profile picture. Order by user_id to make DISTINCT ON predictable.
+      // We order by created_at DESC within the user partition so DISTINCT ON picks the user details
+      // associated with their most recent story (though it doesn't strictly matter here).
+      final results = await _connection!.query('''
+        SELECT DISTINCT ON (s.user_id)
+               s.user_id,
+               u.username,
+               u.profile_pic_url
+        FROM stories s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.created_at >= NOW() - INTERVAL '24 hours'
+        ORDER BY s.user_id, s.created_at DESC;
+      ''');
+
+      return results.map((row) {
+        return {
+          "user_id": row[0] as int? ?? 0,
+          "username": row[1] as String? ?? "Unknown",
+          "profile_pic_url": row[2] as String?, // Can be null
+        };
+      }).toList();
+    } catch (e) {
+      print("Error fetching story summaries: $e");
+      return [];
+    }
+  }
+
+  /// Fetches stories for a specific user created in the last 24 hours.
+  /// Returns a list of maps, each containing 'id', 'content_url', 'created_at'.
+  Future<List<Map<String, dynamic>>> getStoriesForUser(int userId) async {
+    await ensureConnection();
+    try {
+      final results = await _connection!.query('''
+        SELECT id, content_url, created_at::TEXT
+        FROM stories
+        WHERE user_id = @userId
+          AND created_at >= NOW() - INTERVAL '24 hours'
+        ORDER BY created_at ASC; -- Show oldest first for viewing sequence
+      ''', substitutionValues: {
+        'userId': userId,
+      });
+
+      return results.map((row) {
+        return {
+          "id": row[0] as int? ?? 0,
+          "content_url": row[1] as String? ?? "",
+          "created_at": row[2] as String? ?? "",
+        };
+      }).toList();
+    } catch (e) {
+      print("Error fetching stories for user $userId: $e");
+      return [];
+    }
+  }
+
+  /// Creates a new story entry in the database.
+  Future<bool> createStory({
+    required int userId,
+    required String contentUrl,
+  }) async {
+    await ensureConnection();
+    try {
+      await _connection!.query('''
+        INSERT INTO stories (user_id, content_url, created_at)
+        VALUES (@userId, @contentUrl, NOW())
+      ''', substitutionValues: {
+        'userId': userId,
+        'contentUrl': contentUrl,
+      });
+      return true;
+    } catch (e) {
+      print("Error creating story: $e");
+      return false;
+    }
+  }
+
+  // Add this method inside your PostgresDB class in sql.dart
+
+  Future<bool> hasUserApplied(int jobId, int userId) async {
+    try {
+      await ensureConnection(); // Ensure connection is ready
+      final results = await _connection!.query(
+        // Check if a record exists matching both job_id and user_id
+        'SELECT 1 FROM job_applications WHERE job_id = @jobId AND user_id = @userId LIMIT 1',
+        substitutionValues: {
+          'jobId': jobId,
+          'userId': userId,
+        },
+      );
+      // If the query returned any rows (even just one), it means the user has applied.
+      return results.isNotEmpty;
+    } catch (e) {
+      print('Error checking if user applied for job $jobId: $e');
+      // Decide how to handle errors. Returning false might allow applying again on error.
+      // Throwing an exception might be better to signal a DB issue.
+      return false; // Or throw Exception('Failed to check application status: $e');
+    }
+  }
+
+
 }

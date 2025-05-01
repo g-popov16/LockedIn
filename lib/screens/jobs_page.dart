@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../sql.dart';
-import '../widgets/job_widget.dart';
+import '../widgets/job_widget.dart'; // Ensure this path is correct
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+// --- Define Theme Colors (Matching other files) ---
+const Color _backgroundColor = Color(0xFF121212);
+const Color _cardBackgroundColor = Color(0xFF1F1F1F);
+const Color _accentColor = Color(0xFFE85D5D);
+const Color _primaryTextColor = Colors.white;
+const Color _secondaryTextColor = Colors.white70;
+const Color _placeholderColor = Colors.grey;
+const Color _iconColor = Colors.white70;
+const double _cardBorderRadius = 12.0;
+// --- End Theme Colors ---
 
 class JobsPage extends StatefulWidget {
-  final String userRole;
+  final String userRole; // Expecting raw DB role like "ROLE_TEAM"
 
   const JobsPage({super.key, required this.userRole});
 
@@ -18,322 +30,370 @@ class _JobsPageState extends State<JobsPage> {
   List<Map<String, dynamic>> jobs = [];
   bool isLoading = true;
   int? currentUserId;
-  String? userRole;
+  String? _currentUserRoleState; // State variable derived from widget.userRole
 
   @override
   void initState() {
     super.initState();
-    _fetchJobs();
-    _fetchCurrentUserId();
+    _currentUserRoleState = widget.userRole.trim().toUpperCase();
+    _fetchInitialData();
   }
 
-  Future<void> _fetchJobs() async {
+  Future<void> _fetchInitialData() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
+    try {
+      await _fetchCurrentUserId();
+      if (!mounted) return;
+      await _fetchJobs();
+    } catch (e) {
+      print("Error during initial data fetch: $e");
+      if(mounted) {
+        // Use key from provided JSON
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.addJobError), backgroundColor: Colors.redAccent));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
 
+
+  Future<void> _fetchJobs() async {
     try {
       final fetchedJobs = await db.getJobs();
+      if (!mounted) return;
       setState(() {
         jobs = fetchedJobs;
-        isLoading = false;
       });
     } catch (e) {
-      setState(() => isLoading = false);
+      print("Error fetching jobs: $e");
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      // Use key from provided JSON
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.addJobError), backgroundColor: Colors.redAccent));
     }
   }
 
   Future<void> _fetchCurrentUserId() async {
     try {
       int? userId = await db.getCurrentUserId();
-      if (userId != null) {
-        setState(() {
-          currentUserId = userId;
-        });
-
-        //  Fetch and store user role in the local state variable
-        String fetchedRole = await db.getUserRoles(userId);
-        setState(() {
-          userRole = fetchedRole.trim().toUpperCase();
-        });
-
-      }
+      if (!mounted) return;
+      setState(() {
+        currentUserId = userId;
+      });
     } catch (e) {
+      print("Error fetching current user ID: $e");
+      if (mounted) {
+        setState(() { currentUserId = null; });
+        final l10n = AppLocalizations.of(context)!;
+        // Use key from provided JSON
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.errorUnableToRetrieveUserInfo), backgroundColor: Colors.redAccent));
+      }
     }
   }
 
 
   // Show dialog for adding a new job
   void _showAddJobDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final companyController = TextEditingController();
-    final theme = Theme.of(context);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: theme.cardColor, // Dark grey background
-          title: Text(
-            "Add Job Offer",
-            style: theme.textTheme.titleLarge,
-          ),
+          backgroundColor: _cardBackgroundColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_cardBorderRadius)),
+          // Use key from provided JSON
+          title: Text(l10n.addJobOfferTitle, style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: titleController,
-                  style: theme.textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    labelText: "Job Title",
-                    labelStyle: theme.textTheme.bodyLarge,
-                    hintText: "Enter job title",
-                    hintStyle: theme.textTheme.bodyMedium,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.white70),
-                    ),
-                    filled: true,
-                    fillColor: theme.scaffoldBackgroundColor, // Matches dark mode
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: descriptionController,
-                  style: theme.textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    labelText: "Job Description",
-                    labelStyle: theme.textTheme.bodyLarge,
-                    hintText: "Enter job description",
-                    hintStyle: theme.textTheme.bodyMedium,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.white70),
-                    ),
-                    filled: true,
-                    fillColor: theme.scaffoldBackgroundColor,
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: companyController,
-                  style: theme.textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    labelText: "Company Name",
-                    labelStyle: theme.textTheme.bodyLarge,
-                    hintText: "Enter company name",
-                    hintStyle: theme.textTheme.bodyMedium,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.white70),
-                    ),
-                    filled: true,
-                    fillColor: theme.scaffoldBackgroundColor,
-                  ),
-                ),
+                // Use keys from provided JSON
+                _buildDialogTextField(controller: titleController, label: l10n.jobTitleLabel, hint: l10n.jobTitleHint),
+                const SizedBox(height: 12),
+                // Use keys from provided JSON
+                _buildDialogTextField(controller: descriptionController, label: l10n.jobDescriptionLabel, hint: l10n.jobDescriptionHint, maxLines: 3),
+                const SizedBox(height: 12),
+                // Use keys from provided JSON
+                _buildDialogTextField(controller: companyController, label: l10n.companyNameLabel, hint: l10n.companyNameHint),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: theme.textTheme.bodyLarge),
+              // Use key from provided JSON
+              child: Text(l10n.cancelButton, style: TextStyle(color: _secondaryTextColor)),
             ),
             ElevatedButton(
               onPressed: () async {
                 final title = titleController.text.trim();
                 final description = descriptionController.text.trim();
                 final company = companyController.text.trim();
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
 
                 if (title.isNotEmpty && description.isNotEmpty && company.isNotEmpty) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
                   await _addJob(title, description, company);
-                  Navigator.pop(context); // Close dialog
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Please fill in all fields")),
+                  if (!mounted) return;
+                  scaffoldMessenger.showSnackBar(
+                    // Use key from provided JSON
+                    SnackBar(content: Text(l10n.addJobFieldsRequiredError), backgroundColor: Colors.orangeAccent),
                   );
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor, // Uses the theme primary color
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  backgroundColor: _accentColor,
+                  foregroundColor: _primaryTextColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
               ),
-              child: const Text("Add Job"),
+              // Use key from provided JSON
+              child: Text(l10n.addJobButton),
             ),
           ],
         );
       },
+    ).then((_) {
+      titleController.dispose();
+      descriptionController.dispose();
+      companyController.dispose();
+    });
+  }
+
+  Widget _buildDialogTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      style: TextStyle(color: _primaryTextColor),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: _secondaryTextColor),
+        hintText: hint,
+        hintStyle: TextStyle(color: _secondaryTextColor.withOpacity(0.5)),
+        filled: true,
+        fillColor: _backgroundColor,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: _secondaryTextColor.withOpacity(0.5))
+        ),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: _secondaryTextColor.withOpacity(0.5))
+        ),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: _accentColor)
+        ),
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
     );
   }
 
 
   Future<void> _addJob(String title, String description, String company) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     if (currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error: Unable to retrieve user info")),
+      scaffoldMessenger.showSnackBar(
+        // Use key from provided JSON
+        SnackBar(content: Text(l10n.errorUnableToRetrieveUserInfo), backgroundColor: Colors.redAccent),
       );
       return;
     }
 
     try {
-      await db.addJob(
-        title: title,
-        description: description,
-        company: company,
-        postedBy: currentUserId!,
+      await db.addJob(title: title, description: description, company: company, postedBy: currentUserId!);
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        // Use key from provided JSON
+        SnackBar(content: Text(l10n.addJobSuccess), backgroundColor: Colors.green),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Job offer added successfully!")),
-      );
-      _fetchJobs(); // Refresh list
+      _fetchJobs();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error adding job offer")),
+      print("Error adding job: $e");
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        // Use key from provided JSON
+        SnackBar(content: Text(l10n.addJobError), backgroundColor: Colors.redAccent),
       );
     }
   }
 
-  // Show job applicants + accept/reject logic
   void _showApplicantsDialog(int jobId) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    showDialog(context: context, barrierDismissible: false, builder: (_) => Center(child: CircularProgressIndicator(color: _accentColor)));
+
     try {
-      final theme = Theme.of(context);
       final applicants = await db.getApplicantsForJob(jobId);
+      if (!mounted) return;
+      Navigator.pop(context);
 
       showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (BuildContext contextDialog) {
           return AlertDialog(
-            backgroundColor: theme.cardColor, // Dark grey background
-            title: Text(
-              "Job Applicants",
-              style: theme.textTheme.titleLarge,
-            ),
+            backgroundColor: _cardBackgroundColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_cardBorderRadius)),
+            // Use key from provided JSON
+            title: Text(l10n.jobApplicantsTitle, style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)),
             content: applicants.isEmpty
                 ? Text(
-              "No applicants yet.",
-              style: theme.textTheme.bodyLarge,
+              // Use key from provided JSON
+              l10n.jobApplicantsNone,
+              style: TextStyle(color: _secondaryTextColor),
             )
                 : SizedBox(
               width: double.maxFinite,
+              height: MediaQuery.of(contextDialog).size.height * 0.5,
               child: ListView.builder(
+                shrinkWrap: true,
                 itemCount: applicants.length,
-                itemBuilder: (context, index) {
+                itemBuilder: (contextList, index) {
                   final applicant = applicants[index];
+                  final applicantUserId = applicant["user_id"] as int?;
+                  final applicationId = applicant["application_id"] as int?;
+                  final String? applicantUsername = applicant["username"];
+                  final String? applicantEmail = applicant["email"];
+                  final String? resumeLink = applicant["resume_link"] as String?;
+
+                  if (applicationId == null || applicantUserId == null) {
+                    print("Missing application ID ($applicationId) or user ID ($applicantUserId) for applicant: $applicant");
+                    return const SizedBox.shrink();
+                  }
 
                   return Card(
-                    color: theme.scaffoldBackgroundColor, // Dark mode card
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    color: _backgroundColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
-                      title: Text(
-                        applicant["username"],
-                        style: theme.textTheme.bodyLarge,
-                      ),
+                      // Use key from provided JSON
+                      title: Text(applicantUsername ?? l10n.unknownUser, style: TextStyle(color: _primaryTextColor)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 4),
                           Text(
-                            "Email: ${applicant["email"]}",
-                            style: theme.textTheme.bodyMedium,
+                            // Use key from provided JSON (ensure placeholder syntax matches .arb)
+                            l10n.jobApplicantEmailLabel(applicantEmail ?? 'N/A'),
+                            style: TextStyle(color: _secondaryTextColor, fontSize: 12),
                           ),
-                          const SizedBox(height: 5),
-                          InkWell(
-                            onTap: () async {
-                              String url = applicant["resume_link"].trim();
+                          const SizedBox(height: 4),
+                          if (resumeLink != null && resumeLink.isNotEmpty)
+                            InkWell(
+                              onTap: () async {
+                                String url = resumeLink.trim();
+                                Uri? resumeUri = Uri.tryParse(url);
 
-                              // Ensure proper URL formatting
-                              if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                                url = "https://$url";
-                              } else if (url.startsWith("https:/") && !url.startsWith("https://")) {
-                                url = url.replaceFirst("https:/", "https://"); // Fix malformed URL
-                              }
+                                if (resumeUri == null || (!resumeUri.isScheme("http") && !resumeUri.isScheme("https"))) {
+                                  resumeUri = Uri.tryParse("https://$url");
+                                }
 
-                              final Uri resumeUrl = Uri.parse(url);
-
-                              try {
-                                bool canOpen = await canLaunchUrl(resumeUrl);
-
-                                if (canOpen) {
-                                  bool launched = await launchUrl(
-                                    resumeUrl,
-                                    mode: LaunchMode.externalApplication, // System browser
-                                  );
-                                  if (!launched) {
-                                    throw "Launch failed";
+                                if (resumeUri != null) {
+                                  try {
+                                    if (await canLaunchUrl(resumeUri)) {
+                                      await launchUrl(resumeUri, mode: LaunchMode.externalApplication);
+                                    } else {
+                                      throw Exception('Cannot launch URL');
+                                    }
+                                  } catch (e) {
+                                    print("Error launching URL $resumeUri: $e");
+                                    if (!mounted) return;
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(
+                                        // Use key from provided JSON
+                                        content: Text(l10n.jobApplicantResumeOpenError),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
+                                    );
                                   }
                                 } else {
-                                  throw "Cannot launch URL";
+                                  print("Invalid resume URL format: $resumeLink");
+                                  if (!mounted) return;
+                                  scaffoldMessenger.showSnackBar(
+                                    // Use key from provided JSON
+                                    SnackBar(content: Text(l10n.jobApplicantResumeOpenError), backgroundColor: Colors.redAccent),
+                                  );
                                 }
-                              } catch (e) {
-                                Clipboard.setData(ClipboardData(text: url));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Could not open the CV link.\nThe link has been copied to your clipboard.",
-                                      style: Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                    action: SnackBarAction(
-                                      label: "Open Browser",
-                                      onPressed: () async {
-                                        await launchUrl(resumeUrl, mode: LaunchMode.platformDefault);
-                                      },
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                            child: Text(
-                              "Resume: ${applicant["resume_link"]}",
-                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                color: Theme.of(context).primaryColor,
-                                decoration: TextDecoration.underline,
+                              },
+                              child: Text(
+                                // Use key from provided JSON (ensure placeholder syntax matches .arb)
+                                l10n.jobApplicantResumeLabel(resumeLink),
+                                style: TextStyle(
+                                  color: _accentColor,
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ),
+                            )
+                          // Use key from provided JSON (ensure placeholder syntax matches .arb)
+                          else Text(l10n.jobApplicantResumeLabel('N/A'), style: TextStyle(color: _secondaryTextColor, fontSize: 12)),
                         ],
                       ),
                       trailing: PopupMenuButton<String>(
-                        color: theme.scaffoldBackgroundColor, // Dark menu
+                        color: _cardBackgroundColor,
+                        icon: Icon(Icons.more_vert, color: _iconColor),
+                        // Use key from provided JSON (if available, otherwise use generic 'Actions')
+                        tooltip: l10n.actions, // Assuming 'actions' key exists for general tooltips
                         onSelected: (value) async {
+                          Navigator.pop(contextDialog);
+
                           if (value == 'accept') {
-                            await _acceptApplicant(
-                              jobId,
-                              applicant["user_id"],
-                              applicant["application_id"],
-                            );
+                            String? actualPosterRole;
+                            try {
+                              int? posterId = jobs.firstWhere((job) => job['id'] == jobId)['posted_by'];
+                              if(posterId != null) {
+                                actualPosterRole = await db.getUserRoles(posterId);
+                              }
+                            } catch (e) {
+                              print("Could not get poster role for accept logic: $e");
+                            }
+                            if (!mounted) return;
+                            await _acceptApplicant(jobId, applicantUserId, applicationId, actualPosterRole?.trim().toUpperCase());
                           } else if (value == 'reject') {
-                            await db.deleteApplication(
-                              applicant["application_id"],
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Application rejected!"),
-                              ),
-                            );
-                            Navigator.pop(context);
-                            _showApplicantsDialog(jobId);
+                            try {
+                              await db.deleteApplication(applicationId);
+                              if (!mounted) return;
+                              scaffoldMessenger.showSnackBar(
+                                // Use key from provided JSON
+                                SnackBar(content: Text(l10n.applicationRejectedSuccess), backgroundColor: Colors.orangeAccent),
+                              );
+                              _showApplicantsDialog(jobId);
+                            } catch(e) {
+                              print("Error rejecting application: $e");
+                              if (!mounted) return;
+                              // Use key from provided JSON
+                              scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.errorAcceptingApplicant), backgroundColor: Colors.redAccent));
+                            }
                           }
                         },
-                        itemBuilder: (BuildContext context) =>
-                        <PopupMenuEntry<String>>[
-                          PopupMenuItem<String>(
-                            value: 'accept',
-                            child: Text(
-                              'Accept',
-                              style: theme.textTheme.bodyLarge,
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'reject',
-                            child: Text(
-                              'Reject',
-                              style: theme.textTheme.bodyLarge!
-                                  .copyWith(color: Colors.red),
-                            ),
-                          ),
+                        itemBuilder: (BuildContext contextPopup) => <PopupMenuEntry<String>>[
+                          // Use keys from provided JSON
+                          PopupMenuItem<String>(value: 'accept', child: Text(l10n.acceptButton, style: TextStyle(color: _primaryTextColor))),
+                          PopupMenuItem<String>(value: 'reject', child: Text(l10n.rejectButton, style: TextStyle(color: _accentColor))),
                         ],
                       ),
                     ),
@@ -343,226 +403,252 @@ class _JobsPageState extends State<JobsPage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  "Close",
-                  style: theme.textTheme.bodyLarge,
-                ),
+                onPressed: () => Navigator.pop(contextDialog),
+                // Use key from provided JSON
+                child: Text(l10n.closeButton, style: TextStyle(color: _accentColor)),
               ),
             ],
           );
         },
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error fetching applicants.")),
+      print("Error showing applicants dialog: $e");
+      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        // Use key from provided JSON
+        SnackBar(content: Text(l10n.jobApplicantsFetchError), backgroundColor: Colors.redAccent),
       );
     }
   }
 
-
-
-  // Show dialog for applying to a job
   Future<void> _showCVDialog(int jobId, int jobPosterId) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final cvLinkController = TextEditingController();
 
     if (currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error: Unable to retrieve user information")),
-      );
+      // Use key from provided JSON
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.errorUnableToRetrieveUserInfo), backgroundColor: Colors.redAccent));
       return;
     }
 
-    // Fetch the job poster's role (team or sponsor)
-    String? jobPosterRole = await db.getUserRoles(jobPosterId);
+    bool canApply = true;
+    String? errorMessage;
+    try {
+      bool alreadyApplied = await db.hasUserApplied(jobId, currentUserId!);
+      if(!mounted) return;
+      if(alreadyApplied) {
+        canApply = false;
+        // Use key from provided JSON (Add "alreadyAppliedError" key to your .arb file)
+        errorMessage = l10n.alreadyAppliedError; // Assuming key "alreadyAppliedError" exists
+      } else {
+        String? jobPosterRole = await db.getUserRoles(jobPosterId);
+        if (!mounted) return;
 
-    if (jobPosterRole == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error: Unable to fetch job poster role.")),
-      );
-      return;
-    }
-
-    // If the job is posted by a team, check if the user is already in a team
-    if (jobPosterRole == "team") {
-      bool isInTeam = await db.isUserInTeam(currentUserId!);
-      if (isInTeam) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Oops! You are already in a team.")),
-        );
-        return;
+        if (jobPosterRole == null) {
+          canApply = false;
+          // Use key from provided JSON
+          errorMessage = l10n.errorFetchJobPosterRole;
+        } else if (jobPosterRole.trim().toUpperCase() == "ROLE_TEAM") {
+          bool isInTeam = await db.isUserInTeam(currentUserId!);
+          if (!mounted) return;
+          if (isInTeam) {
+            canApply = false;
+            // Use key from provided JSON
+            errorMessage = l10n.applyJobAlreadyInTeamError;
+          }
+        }
       }
+    } catch (e) {
+      print("Error during pre-application checks: $e");
+      canApply = false;
+      // Use key from provided JSON
+      errorMessage = l10n.errorFetchJobPosterRole;
     }
 
-    // Show the application dialog
+    if (!mounted) return;
+
+    if (!canApply) {
+      // Use key from provided JSON (Add "cannotApplyError" key to your .arb file)
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(errorMessage ?? l10n.cannotApplyError), backgroundColor: Colors.orangeAccent)); // Assuming key "cannotApplyError" exists
+      return;
+    }
+
     String? cvLink = await showDialog<String>(
       context: context,
-      builder: (BuildContext context) {
-        final theme = Theme.of(context);
-
+      builder: (BuildContext contextDialog) {
         return AlertDialog(
-          backgroundColor: theme.scaffoldBackgroundColor, // Always dark
-          title: Text(
-            "Apply for Job",
-            style: theme.textTheme.titleLarge,
-          ),
-          content: TextField(
+          backgroundColor: _cardBackgroundColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_cardBorderRadius)),
+          // Use key from provided JSON
+          title: Text(l10n.applyJobTitle, style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)),
+          content: _buildDialogTextField(
             controller: cvLinkController,
-            style: theme.textTheme.bodyLarge,
-            decoration: InputDecoration(
-              labelText: "CV Link",
-              labelStyle: theme.textTheme.bodyLarge,
-              hintText: "https://yourcv.com",
-              hintStyle: theme.inputDecorationTheme.hintStyle,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.white70),
-              ),
-              prefixIcon: const Icon(Icons.link, color: Colors.white),
-              filled: true,
-              fillColor: theme.cardColor, // Dark grey
-            ),
+            // Use keys from provided JSON
+            label: l10n.cvLinkLabel,
+            hint: l10n.cvLinkHint,
+            keyboardType: TextInputType.url,
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("Cancel", style: theme.textTheme.bodyLarge),
-            ),
-            TextButton(
+            // Use key from provided JSON
+            TextButton(onPressed: () => Navigator.of(contextDialog).pop(), child: Text(l10n.cancelButton, style: TextStyle(color: _secondaryTextColor))),
+            ElevatedButton(
               onPressed: () {
                 if (cvLinkController.text.trim().isNotEmpty) {
-                  Navigator.of(context).pop(cvLinkController.text.trim());
+                  Navigator.of(contextDialog).pop(cvLinkController.text.trim());
+                } else {
+                  ScaffoldMessenger.of(contextDialog).showSnackBar(
+                    // Use key from provided JSON
+                      SnackBar(content: Text(l10n.cvLinkRequiredError), backgroundColor: Colors.orangeAccent, behavior: SnackBarBehavior.floating)
+                  );
                 }
               },
-              child: Text("Submit", style: TextStyle(color: theme.primaryColor)),
+              style: ElevatedButton.styleFrom(backgroundColor: _accentColor, foregroundColor: _primaryTextColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              // Use key from provided JSON
+              child: Text(l10n.submitButton),
             ),
           ],
         );
       },
     );
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if(mounted) {
+        cvLinkController.dispose();
+      }
+    });
 
 
+    if (!mounted) return;
 
-
-
-
-  if (cvLink != null && cvLink.isNotEmpty) {
-      await db.addApplication(
-        jobId: jobId,
-        userId: currentUserId!,
-        resumeLink: cvLink,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Application submitted successfully!")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please provide a valid CV link.")),
-      );
+    if (cvLink != null && cvLink.isNotEmpty) {
+      try {
+        await db.addApplication(jobId: jobId, userId: currentUserId!, resumeLink: cvLink);
+        if (!mounted) return;
+        scaffoldMessenger.showSnackBar(
+          // Use key from provided JSON
+          SnackBar(content: Text(l10n.applicationSubmitSuccess), backgroundColor: Colors.green),
+        );
+      } catch(e) {
+        print("Error submitting application: $e");
+        if (!mounted) return;
+        // Use key from provided JSON
+        scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.addJobError), backgroundColor: Colors.redAccent));
+      }
     }
   }
-
-
-
-
 
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      body: isLoading || currentUserId == null
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: jobs.length,
-              itemBuilder: (context, index) {
-                final job = jobs[index];
-                return JobWidget(
-                  jobId: job["id"],
-                  title: job["title"],
-                  company: job["company"],
-                  description: job["description"],
-                  createdAt: job["created_at"],
-                  postedBy: job["posted_by"],
-                  currentUserId: currentUserId,
-                  posterRole: job["role"],
-                  onApply: () => _showCVDialog(job["id"], job["posted_by"]),
-                  onViewApplicants: job["posted_by"] == currentUserId
-                      ? () => _showApplicantsDialog(job["id"])
-                      : null,
-                  // 1) Accept / Decline are optional callbacks from your code
-                  onAcceptApplication: null,
-                  onDeclineApplication: null,
-                  // 2) The crucial callback to refresh after editing/deleting
-                  onJobUpdated: _fetchJobs,
-                );
-              },
-            ),
+      backgroundColor: _backgroundColor,
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: _accentColor))
+          : RefreshIndicator(
+        onRefresh: _fetchJobs,
+        color: _accentColor,
+        backgroundColor: _cardBackgroundColor,
+        child: jobs.isEmpty
+        // Use key from provided JSON
+            ? Center(child: Text(l10n.jobsNone, style: TextStyle(color: _secondaryTextColor, fontSize: 16)))
+            : ListView.builder(
+          padding: const EdgeInsets.fromLTRB(8, 28, 8, 80),
+          itemCount: jobs.length,
+          itemBuilder: (context, index) {
+            final job = jobs[index];
+            final posterRoleValue = job["role"] as String?;
+            final jobId = job["id"] as int? ?? 0;
+            final jobPosterId = job["posted_by"] as int? ?? 0;
+
+            return JobWidget(
+              key: ValueKey(jobId),
+              jobId: jobId,
+              title: job["title"] ?? '',
+              company: job["company"] ?? '',
+              description: job["description"] ?? '',
+              createdAt: job["created_at"] ?? DateTime.now().toIso8601String(),
+              postedBy: jobPosterId,
+              currentUserId: currentUserId,
+              posterRole: posterRoleValue,
+              onApply: () => _showCVDialog(jobId, jobPosterId),
+              onViewApplicants: (currentUserId != null && jobPosterId == currentUserId)
+                  ? () => _showApplicantsDialog(jobId)
+                  : null,
+              onJobUpdated: _fetchJobs,
+            );
+          },
+        ),
+      ),
       floatingActionButton:
-      (userRole != null &&
-          (userRole == "ROLE_TEAM" || userRole == "ROLE_SPONSOR"))
+      (_currentUserRoleState != null && (_currentUserRoleState == "ROLE_TEAM" || _currentUserRoleState == "ROLE_SPONSOR"))
           ? FloatingActionButton(
         onPressed: _showAddJobDialog,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        // Use key from provided JSON
+        tooltip: l10n.addJobFabTooltip,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: _accentColor,
+        foregroundColor: _primaryTextColor,
         child: const Icon(Icons.add),
       )
           : null,
-
     );
   }
 
-  Future<void> _acceptApplicant(int jobId, int userId, int applicationId) async {
-
-
-    // 3️⃣ Update application status to "Accepted"
-    await db.updateApplicationStatus(applicationId, "accepted");
-
-
-
-    if(userRole ==  "ROLE_TEAM") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Applicant accepted and added to team!"))
-      );
-    }
-    else{
-      const SnackBar(content: Text("Applicant accepted and added to sponsorship!"));
-    }
+  Future<void> _acceptApplicant(int jobId, int userId, int applicationId, String? actualPosterRole) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
-      // 1️⃣ Get the team ID associated with the job
-      final int? teamId = await db.getTeamIdByJobId(jobId);
-
-      if (teamId == null) {
-        return;
+      int? teamId;
+      if (actualPosterRole == "ROLE_TEAM") {
+        teamId = await db.getTeamIdByJobId(jobId);
+        if (!mounted) return;
+        if (teamId == null) {
+          print("Error: Could not find team ID for job $jobId posted by a team role.");
+          // Use key from provided JSON
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.errorAddingUserToTeam), backgroundColor: Colors.redAccent));
+          return;
+        }
+        bool addedToTeam = await db.addUserToTeam(teamId: teamId, userId: userId, role: "MEMBER");
+        if (!mounted) return;
+        if (!addedToTeam) {
+          // Use key from provided JSON
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.errorAddingUserToTeam), backgroundColor: Colors.redAccent));
+          return;
+        }
       }
 
+      await db.updateApplicationStatus(applicationId, "accepted");
+      if (!mounted) return;
 
-      // 2️⃣ Add the user to the team_members table
-      bool addedToTeam = await db.addUserToTeam(
-        teamId: teamId,
-        userId: userId,
-        role: "MEMBER",
-      );
-
-      if (!addedToTeam) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error adding user to team.")),
-        );
-        return;
+      String successMessage;
+      if (actualPosterRole == "ROLE_TEAM") {
+        // Use key from provided JSON
+        successMessage = l10n.applicantAcceptedTeam;
+      } else if (actualPosterRole == "ROLE_SPONSOR") {
+        // Use key from provided JSON
+        successMessage = l10n.applicantAcceptedSponsor;
+      } else {
+        // Use key from provided JSON
+        successMessage = l10n.connectRequestAcceptedSuccess; // Generic success
       }
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(successMessage), backgroundColor: Colors.green));
 
-
-
-      // Refresh UI
-      Navigator.pop(context);
-      _showApplicantsDialog(jobId);
+      if (mounted) {
+        _showApplicantsDialog(jobId);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error accepting applicant.")),
-      );
+      print("Error accepting applicant: $e");
+      if (!mounted) return;
+      // Use key from provided JSON
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.errorAcceptingApplicant), backgroundColor: Colors.redAccent));
     }
   }
 
-}
+} // End of _JobsPageState

@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+// --- Re-Define Colors Here or Import from a Shared File ---
+const Color _backgroundColor = Color(0xFF121212);
+const Color _cardBackgroundColor = Color(0xFF1F1F1F); // Updated Card Color
+const Color _accentColor = Color(0xFFE85D5D);
+const Color _primaryTextColor = Colors.white;
+const Color _secondaryTextColor = Colors.white70;
+const Color _placeholderColor = Colors.grey;
+const Color _iconColor = Colors.white70;
+const double _cardBorderRadius = 12.0; // Slightly increased radius
+// ---
 
 class PostWidget extends StatefulWidget {
   final int postId;
@@ -12,7 +24,7 @@ class PostWidget extends StatefulWidget {
   final VoidCallback? onCommentPressed;
   final VoidCallback? onNicknameTap;
   final String? profileImageUrl;
-  final String? imageUrl; // ✅ Image URL for post
+  final String? imageUrl;
   final bool isLiked;
   final VoidCallback? onLikePressed;
 
@@ -38,6 +50,7 @@ class PostWidget extends StatefulWidget {
 
 class _PostWidgetState extends State<PostWidget> {
   late bool isLikedState;
+
   @override
   void initState() {
     super.initState();
@@ -45,18 +58,29 @@ class _PostWidgetState extends State<PostWidget> {
   }
 
   @override
+  void didUpdateWidget(covariant PostWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isLiked != oldWidget.isLiked) {
+      setState(() {
+        isLikedState = widget.isLiked;
+      });
+    }
+  }
+
+
+  @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final DateTime createdTime = DateTime.parse(widget.createdAt);
     final String timeAgo = timeago.format(createdTime);
-    final int totalLikes = (widget.likes ?? 0) + (isLikedState ? 1 : 0);
-
+    // Logic for likes count remains the same
 
     return Card(
-      color: const Color(0xFF343a40), // Dark card color
+      color: _cardBackgroundColor, // Use defined card background color
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(_cardBorderRadius), // Use defined radius
       ),
-      elevation: 2.0,
+      elevation: 0.0, // Flatter look like SignUp page elements
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -66,102 +90,136 @@ class _PostWidgetState extends State<PostWidget> {
             // Profile image and username
             Row(
               children: [
-                if (widget.profileImageUrl != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: CircleAvatar(
-                      backgroundImage: NetworkImage(widget.profileImageUrl!),
-                      radius: 20,
-                    ),
+                // Profile Image styling
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0), // Slightly more padding
+                  child: CircleAvatar(
+                    radius: 22, // Slightly larger
+                    backgroundColor: _placeholderColor.withOpacity(0.3), // Placeholder bg
+                    backgroundImage: (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty)
+                        ? CachedNetworkImageProvider(widget.profileImageUrl!) // Use CachedNetworkImageProvider
+                        : null,
+                    child: (widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty)
+                        ? const Icon(Icons.person, color: _secondaryTextColor, size: 24,) // Default icon styling
+                        : null,
                   ),
-                InkWell(
-                  onTap: widget.onNicknameTap,
-                  child: Text(
-                    widget.username,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 16,
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: widget.onNicknameTap,
+                    child: Text(
+                      widget.username,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _primaryTextColor, // Use defined primary text color
+                        fontSize: 16,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12), // Increased spacing
 
             // Post content
             Text(
               widget.content,
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
+              style: const TextStyle(fontSize: 14, color: _secondaryTextColor), // Use defined secondary text color
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12), // Increased spacing
 
-            // Load Image Separately Using FutureBuilder
-            // Load Image Separately Using FutureBuilder
+            // Post Image
             if (widget.imageUrl?.isNotEmpty ?? false)
               Container(
-                height: 250, // ✅ Set a fixed height for all images
-                width: double.infinity, // ✅ Make it take full width
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.grey[800], // ✅ Background color for consistency
+                // height: 250, // Height can be intrinsic or fixed
+                constraints: const BoxConstraints(
+                  maxHeight: 400, // Max height for image
                 ),
-                clipBehavior: Clip.hardEdge, // ✅ Ensure rounded corners apply
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(_cardBorderRadius - 4), // Slightly smaller radius than card
+                  color: _backgroundColor, // Use main background for image placeholder area
+                ),
+                clipBehavior: Clip.antiAlias, // Use antiAlias for smoother edges
                 child: CachedNetworkImage(
                   imageUrl: widget.imageUrl!,
-                  fit: BoxFit.cover, // ✅ Ensures the image scales correctly
-                  placeholder: (context, url) => Center(
-                    child: CircularProgressIndicator(),
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container( // More subtle placeholder
+                    color: _placeholderColor.withOpacity(0.1),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.0,
+                        valueColor: AlwaysStoppedAnimation<Color>(_placeholderColor),
+                      ),
+                    ),
                   ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.broken_image,
-                    size: 50,
-                    color: Colors.grey,
+                  errorWidget: (context, url, error) => Container( // More subtle error
+                    color: _placeholderColor.withOpacity(0.1),
+                    child: const Icon(
+                      Icons.broken_image,
+                      size: 40,
+                      color: _placeholderColor,
+                    ),
                   ),
                 ),
               ),
-
-
-            const SizedBox(height: 12),
+            if (widget.imageUrl?.isNotEmpty ?? false)
+              const SizedBox(height: 16), // Increased spacing after image
 
             // Like, comment, and timestamp
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Likes Section
                 Row(
                   children: [
-                    IconButton(
-                      icon: Icon(
-                        isLikedState ? Icons.favorite : Icons.favorite_border,
-                        color: isLikedState ? Colors.redAccent : Colors.white70,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          isLikedState = !isLikedState;
-                        });
+                    // Like Button - make tap target slightly larger
+                    InkWell(
+                      onTap: () {
+                        setState(() { isLikedState = !isLikedState; });
                         widget.onLikePressed?.call();
                       },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0), // Padding around icon
+                        child: Icon(
+                          isLikedState ? Icons.favorite : Icons.favorite_border,
+                          color: isLikedState ? _accentColor : _iconColor, // Use defined colors
+                          size: 22, // Slightly larger icon
+                        ),
+                      ),
                     ),
-                    Text('$totalLikes Likes'),
+                    const SizedBox(width: 6),
+                    // Likes Count Text
+                    Text(
+                      l10n.postLikesCount(widget.likes),
+                      style: const TextStyle(fontSize: 13, color: _primaryTextColor), // Use primary color
+                    ),
                   ],
                 ),
-                GestureDetector(
+                // Comment Button
+                InkWell(
                   onTap: widget.onCommentPressed,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.comment, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(
-                        ' Comments',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.white),
-                      ),
-                    ],
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.comment_outlined, size: 20, color: _iconColor), // Use defined icon color
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.postViewComments.trim(),
+                          style: const TextStyle(fontSize: 13, color: _primaryTextColor), // Use primary color
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                // Timestamp
                 Text(
                   timeAgo,
-                  style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  style: const TextStyle(fontSize: 12, color: _secondaryTextColor), // Use secondary color
                 ),
               ],
             ),
@@ -169,9 +227,5 @@ class _PostWidgetState extends State<PostWidget> {
         ),
       ),
     );
-  }
-
-  Future<String> _loadImage(String imageUrl) async {
-    return imageUrl;
   }
 }

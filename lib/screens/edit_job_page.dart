@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../sql.dart';
+// 1. Import AppLocalizations
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class EditJobPage extends StatefulWidget {
   final int jobId;
@@ -45,14 +47,18 @@ class _EditJobPageState extends State<EditJobPage> {
   }
 
   Future<void> _saveChanges() async {
+    // Get l10n instance and ScaffoldMessenger safely
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final updatedTitle = _titleController.text.trim();
     final updatedCompany = _companyController.text.trim();
     final updatedDescription = _descriptionController.text.trim();
 
     if (updatedTitle.isEmpty || updatedCompany.isEmpty || updatedDescription.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("All fields must be filled!")),
-      );
+      // Use localized error
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.editJobFieldsRequiredError)));
       return;
     }
 
@@ -63,121 +69,140 @@ class _EditJobPageState extends State<EditJobPage> {
         description: updatedDescription,
         company: updatedCompany,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Job updated successfully!")),
-      );
-      widget.onJobUpdated();
-      Navigator.pop(context);
+      // Check mounted before SnackBar, callback, and pop
+      if (!mounted) return;
+      // Use localized success message
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.editJobUpdateSuccess)));
+      widget.onJobUpdated(); // Call refresh callback
+      if (mounted) Navigator.pop(context); // Pop only if still mounted
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to update the job.")),
-      );
+      print("Error updating job: $e");
+      // Check mounted before SnackBar
+      if (!mounted) return;
+      // Use localized error message
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.editJobUpdateFailedError)));
     }
   }
 
   Future<void> _deleteJob() async {
+    // Get l10n instance and ScaffoldMessenger safely
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     try {
+      // Optional: Add confirmation dialog before deleting
+      // bool confirmDelete = await showDialog(...) ?? false;
+      // if (!confirmDelete || !mounted) return;
+
       await db.deleteJob(widget.jobId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Job deleted successfully!")),
-      );
-      widget.onJobUpdated();
-      Navigator.pop(context);
+      // Check mounted before SnackBar, callback, and pop
+      if (!mounted) return;
+      // Use localized success message
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.editJobDeleteSuccess)));
+      widget.onJobUpdated(); // Call refresh callback
+      if (mounted) Navigator.pop(context); // Pop only if still mounted
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to delete the job.")),
-      );
+      print("Error deleting job: $e");
+      // Check mounted before SnackBar
+      if (!mounted) return;
+      // Use localized error message
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(l10n.editJobDeleteFailedError)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // 2. Get AppLocalizations instance
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context); // Keep theme reference
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor, // Use theme background
       appBar: AppBar(
-        title: Text("Edit Job", style: theme.textTheme.titleLarge),
-        backgroundColor: theme.appBarTheme.backgroundColor,
+        // 3. Use localized title
+        title: Text(l10n.editJobTitle, style: theme.appBarTheme.titleTextStyle), // Use theme style
+        backgroundColor: theme.appBarTheme.backgroundColor, // Use theme color
+        iconTheme: theme.appBarTheme.iconTheme, // Use theme icon theme
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Job Title
-            TextField(
-              controller: _titleController,
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                labelText: "Job Title",
-                labelStyle: theme.textTheme.bodyLarge,
-                hintText: "Enter job title",
-                hintStyle: theme.textTheme.bodyMedium,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.white70),
+        // Wrap with SingleChildScrollView if content might overflow on smaller screens
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Job Title
+              TextField(
+                controller: _titleController,
+                style: theme.textTheme.bodyLarge,
+                decoration: InputDecoration(
+                  // 3. Use localized labels/hints
+                  labelText: l10n.jobTitleLabel,
+                  labelStyle: theme.textTheme.bodyLarge,
+                  hintText: l10n.jobTitleHint,
+                  hintStyle: theme.textTheme.bodyMedium,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white70)),
+                  filled: true,
+                  fillColor: theme.scaffoldBackgroundColor,
                 ),
-                filled: true,
-                fillColor: theme.scaffoldBackgroundColor,
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // Company Name
-            TextField(
-              controller: _companyController,
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                labelText: "Company Name",
-                labelStyle: theme.textTheme.bodyLarge,
-                hintText: "Enter company name",
-                hintStyle: theme.textTheme.bodyMedium,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.white70),
+              // Company Name
+              TextField(
+                controller: _companyController,
+                style: theme.textTheme.bodyLarge,
+                decoration: InputDecoration(
+                  // 3. Use localized labels/hints
+                  labelText: l10n.companyNameLabel,
+                  labelStyle: theme.textTheme.bodyLarge,
+                  hintText: l10n.companyNameHint,
+                  hintStyle: theme.textTheme.bodyMedium,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white70)),
+                  filled: true,
+                  fillColor: theme.scaffoldBackgroundColor,
                 ),
-                filled: true,
-                fillColor: theme.scaffoldBackgroundColor,
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // Job Description
-            TextField(
-              controller: _descriptionController,
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                labelText: "Job Description",
-                labelStyle: theme.textTheme.bodyLarge,
-                hintText: "Enter job description",
-                hintStyle: theme.textTheme.bodyMedium,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.white70),
+              // Job Description
+              TextField(
+                controller: _descriptionController,
+                style: theme.textTheme.bodyLarge,
+                decoration: InputDecoration(
+                  // 3. Use localized labels/hints
+                  labelText: l10n.jobDescriptionLabel,
+                  labelStyle: theme.textTheme.bodyLarge,
+                  hintText: l10n.jobDescriptionHint,
+                  hintStyle: theme.textTheme.bodyMedium,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white70)),
+                  filled: true,
+                  fillColor: theme.scaffoldBackgroundColor,
                 ),
-                filled: true,
-                fillColor: theme.scaffoldBackgroundColor,
+                maxLines: 5,
               ),
-              maxLines: 5,
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: _deleteJob,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text("Delete Job"),
-                ),
-                ElevatedButton(
-                  onPressed: _saveChanges,
-                  style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
-                  child: const Text("Save Changes"),
-                ),
-              ],
-            ),
-          ],
+              // Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton(
+                    onPressed: _deleteJob, // Keep logic
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    // 3. Use localized button text
+                    child: Text(l10n.deleteJobButton),
+                  ),
+                  ElevatedButton(
+                    onPressed: _saveChanges, // Keep logic
+                    style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
+                    // 3. Use localized button text
+                    child: Text(l10n.saveChangesButton),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
